@@ -1,16 +1,16 @@
-## Summary
+## 概要
 
 - 
 
-## Why
+## 背景 / 目的
 
 - 
 
-## Changes
+## 変更内容
 
 - 
 
-## Scope
+## 影響範囲
 
 - frontend
 - api-gateway
@@ -20,31 +20,31 @@
 - infra
 - docs
 
-## Verification
+## 検証
 
 - [ ] `go test ./...`
 - [ ] `npm run build`
 - [ ] `docker compose config -q`
-- [ ] Other:
+- [ ] その他:
 
-## API / DB / Infra Impact
+## API / DB / Infra への影響
 
-- [ ] API changed
-- [ ] DB schema changed
-- [ ] Compose changed
-- [ ] Kubernetes / Helm changed
-- [ ] No major impact
+- [ ] API を変更した
+- [ ] DB schema を変更した
+- [ ] Compose を変更した
+- [ ] Kubernetes / Helm を変更した
+- [ ] 大きな影響はない
 
-## Documentation
+## ドキュメント
 
-- [ ] Updated `RULES.md` if needed
-- [ ] Updated relevant docs in `docs/`
-- [ ] No doc changes needed
+- [ ] 必要に応じて `RULES.md` を更新した
+- [ ] 関連する `docs/` を更新した
+- [ ] ドキュメント更新は不要
 
-## Risks
+## リスク / 注意点
 
 - 
 
-## Notes
+## 補足
 
 - 
