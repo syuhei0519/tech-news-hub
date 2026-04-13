@@ -111,6 +111,13 @@
 - frontend build
 - compose config validation
 
+補足:
+
+- 通常のコード変更では上記を `make verify` で実行する
+- docs-only 変更では、required status check を維持するため `verify` ジョブは成功させる
+- ただし docs-only 変更時は重い `make verify` を省略してよい
+- docs-only 判定条件は workflow 側で管理する
+
 将来的に追加候補:
 
 - API integration test
