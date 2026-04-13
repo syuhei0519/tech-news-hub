@@ -1,0 +1,95 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: tech-feed-mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./deployments/compose/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  article-service:
+    build:
+      context: .
+      dockerfile: deployments/docker/article-service.Dockerfile
+    environment:
+      PORT: 8081
+      MYSQL_DSN: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=true
+    ports:
+      - "${ARTICLE_SERVICE_PORT}:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: deployments/docker/api-gateway.Dockerfile
+    environment:
+      PORT: 8080
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_BASE_URL}
+      JWT_SECRET: local-dev-secret
+    ports:
+      - "${API_GATEWAY_PORT}:8080"
+    depends_on:
+      - article-service
+
+  collector-service:
+    build:
+      context: .
+      dockerfile: deployments/docker/collector-service.Dockerfile
+    environment:
+      PORT: 8082
+      ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_BASE_URL}
+      COLLECTOR_SOURCES_JSON: |
+        [
+          {
+            "name": "Kubernetes Blog",
+            "type": "rss",
+            "url": "https://kubernetes.io/feed.xml",
+            "default_category": "kubernetes"
+          },
+          {
+            "name": "GitHub Changelog",
+            "type": "rss",
+            "url": "https://github.blog/changelog/feed/",
+            "default_category": "github"
+          }
+        ]
+    ports:
+      - "${COLLECTOR_SERVICE_PORT}:8082"
+    depends_on:
+      - article-service
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: deployments/docker/notification-service.Dockerfile
+    environment:
+      PORT: 8083
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:8083"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: deployments/docker/frontend.Dockerfile
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    depends_on:
+      - api-gateway
+
+volumes:
+  mysql_data:
