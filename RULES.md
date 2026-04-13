@@ -120,6 +120,12 @@
 - `.env` はコミットしない
 - `.env.example` は常に最新に保つ
 - Git のコミットメッセージは日本語で記述する
+- 明示的な指示がない限り `main` へ直接 push しない
+- 基本運用は feature branch + Pull Request とする
+- release branch は明示的な指示がない限り切らない
+- バグ修正は `hotfix` として扱う
+- merge 方式は `merge commit` を使う
+- マージ済み branch は削除してよい
 
 ## Phase Rules
 

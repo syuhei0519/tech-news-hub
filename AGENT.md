@@ -21,6 +21,7 @@
 - `docs/dod.md`
 - `docs/test-policy.md`
 - `docs/release-migration-policy.md`
+- `docs/branch-strategy.md`
 - `docs/current-status.md`
 - `docs/backlog-priority.md`
 - `docs/known-issues.md`
