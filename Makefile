@@ -1,4 +1,4 @@
-include .env
+-include .env
 
 .PHONY: up down logs ps build test verify
 
