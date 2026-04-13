@@ -23,12 +23,15 @@
 - Docker Compose 起動基盤
 - ルール / 要件 / ガイドライン / ADR のドキュメント群
 - GitHub Issue / PR テンプレート
+- GitHub Actions の最小 CI
+- collector-service / api-gateway の最小ユニットテスト
 
 ## Verified State
 
 - Go サービスの `go test ./...` は通過済み
 - frontend の `npm run build` は通過済み
 - `docker compose config -q` は通過済み
+- `make verify` は通過済み
 
 ## Highest Priority Next
 

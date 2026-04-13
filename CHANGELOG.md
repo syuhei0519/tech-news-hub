@@ -17,6 +17,8 @@
 - GitHub Issue / PR テンプレート
 - Current status / backlog priority / known issues / glossary
 - Makefile の `build`, `test`, `verify` タスク
+- GitHub Actions の最小 CI workflow
+- collector-service / api-gateway の最小テスト
 
 ## 0.1.0
 
