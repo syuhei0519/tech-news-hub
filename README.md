@@ -41,3 +41,10 @@ Phase 1 では以下を実装対象とします。
 ├── docs
 └── scripts
 ```
+
+## Rule Documents
+
+- `AGENT.md`: 開発者向けの入口
+- `RULES.md`: プロジェクト全体ルール
+- `docs/requirements.md`: 要件整理
+- `docs/rules-operations.md`: ルール運用方法
