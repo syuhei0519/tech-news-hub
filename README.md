@@ -66,3 +66,8 @@ Phase 1 では以下を実装対象とします。
 - `make build`: frontend build
 - `make test`: backend test
 - `make verify`: test + build + compose config check
+
+補足:
+
+- 通常のコード変更では CI も `make verify` 相当を実行します
+- docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します

@@ -105,6 +105,13 @@
 - ドキュメント更新漏れがないか
 - `docs/dod.md` を満たしているか
 
+### CI Interpretation
+
+- 通常のコード変更では `make verify` を回す
+- docs-only 変更では、required status check を壊さない範囲で重い検証を省略してよい
+- その場合でも `verify` チェック自体は成功状態を返す
+- docs-only 判定ロジックは `.github/workflows/ci.yml` を正本とする
+
 ## Update Policy
 
 ### RULES.md を更新する場合
@@ -342,6 +349,7 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 - 標準検証は `make verify` を使う
 - コミットメッセージ規約は `docs/naming-conventions.md` を参照し、日本語で記述する
 - Git 運用は `docs/branch-strategy.md` を参照する
+- docs-only 変更時の CI 軽量化ルールは `.github/workflows/ci.yml` と `docs/test-policy.md` を参照する
 
 ## Notes
 
