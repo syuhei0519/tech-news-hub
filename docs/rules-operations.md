@@ -17,6 +17,7 @@
 - `docs/test-policy.md`
 - `docs/naming-conventions.md`
 - `docs/release-migration-policy.md`
+- `docs/branch-strategy.md`
 - `docs/adr/*`
 - `docs/current-status.md`
 - `docs/backlog-priority.md`
@@ -51,6 +52,7 @@
 - `docs/test-policy.md` はテスト追加判断基準
 - `docs/naming-conventions.md` は命名の基準
 - `docs/release-migration-policy.md` は変更の安全な進め方
+- `docs/branch-strategy.md` は Git 運用の基準
 - `docs/adr/*` は設計判断の理由
 - `docs/current-status.md` は次セッションの入口
 - `docs/backlog-priority.md` は優先順の固定
@@ -69,6 +71,7 @@
 - `RULES.md`
 - `docs/current-status.md`
 - `docs/backlog-priority.md`
+- `docs/branch-strategy.md`
 - 今回の変更に関係する guideline
 
 例:
@@ -185,6 +188,16 @@
 
 - 破壊的変更の扱い変更
 - リリース / 移行の進め方変更
+
+### branch-strategy.md を更新する場合
+
+以下のような変更時に更新する。
+
+- main 運用ルール変更
+- PR 必須ルール変更
+- merge 方式変更
+- branch 種別変更
+- branch 削除ルール変更
 
 ### ADR を追加する場合
 
@@ -309,12 +322,13 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 推奨運用手順:
 
 1. Issue を作る
-2. 影響範囲を確認する
-3. 対応する rule / guideline を読む
-4. 実装する
-5. 必要な docs を更新する
-6. `make verify` を実行する
-7. PR を作る
+2. branch を切る
+3. 影響範囲を確認する
+4. 対応する rule / guideline を読む
+5. 実装する
+6. 必要な docs を更新する
+7. `make verify` を実行する
+8. PR を作る
 
 ## Session Continuity Rules
 
@@ -327,6 +341,7 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 - 大きな変更は `CHANGELOG.md` に残す
 - 標準検証は `make verify` を使う
 - コミットメッセージ規約は `docs/naming-conventions.md` を参照し、日本語で記述する
+- Git 運用は `docs/branch-strategy.md` を参照する
 
 ## Notes
 

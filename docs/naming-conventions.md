@@ -122,11 +122,13 @@
 ### Branch
 
 - 目的が分かる短い名前
+- 詳細なブランチ運用は `docs/branch-strategy.md` を参照する
 
 例:
 
 - `feature/source-management`
 - `feature/csv-export`
+- `hotfix/article-filter`
 - `fix/article-filter`
 - `docs/rules-update`
 
