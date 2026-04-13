@@ -18,6 +18,13 @@
 - `RULES.md`
 - `docs/requirements.md`
 - `docs/rules-operations.md`
+- `docs/dod.md`
+- `docs/test-policy.md`
+- `docs/release-migration-policy.md`
+- `docs/current-status.md`
+- `docs/backlog-priority.md`
+- `docs/known-issues.md`
+- `docs/glossary.md`
 - `docs/architecture.md`
 - `docs/phases.md`
 

@@ -48,3 +48,20 @@ Phase 1 では以下を実装対象とします。
 - `RULES.md`: プロジェクト全体ルール
 - `docs/requirements.md`: 要件整理
 - `docs/rules-operations.md`: ルール運用方法
+- `docs/dod.md`: 完了条件
+- `docs/runbook.md`: 開発 / 切り分け手順
+- `docs/test-policy.md`: テスト方針
+- `docs/naming-conventions.md`: 命名規則
+- `docs/release-migration-policy.md`: 変更と移行の方針
+- `docs/adr/`: 重要な設計判断の記録
+- `docs/current-status.md`: 現在地
+- `docs/backlog-priority.md`: 優先順位
+- `docs/known-issues.md`: 既知課題
+- `docs/glossary.md`: 用語集
+- `CHANGELOG.md`: 重要変更履歴
+
+## Standard Commands
+
+- `make build`: frontend build
+- `make test`: backend test
+- `make verify`: test + build + compose config check

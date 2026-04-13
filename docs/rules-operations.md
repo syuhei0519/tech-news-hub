@@ -12,6 +12,17 @@
 - `docs/api-guidelines.md`
 - `docs/db-guidelines.md`
 - `docs/k8s-guidelines.md`
+- `docs/dod.md`
+- `docs/runbook.md`
+- `docs/test-policy.md`
+- `docs/naming-conventions.md`
+- `docs/release-migration-policy.md`
+- `docs/adr/*`
+- `docs/current-status.md`
+- `docs/backlog-priority.md`
+- `docs/known-issues.md`
+- `docs/glossary.md`
+- `CHANGELOG.md`
 - GitHub Issue / PR テンプレート
 
 ## Source Of Truth
@@ -23,15 +34,29 @@
 3. `docs/api-guidelines.md`
 4. `docs/db-guidelines.md`
 5. `docs/k8s-guidelines.md`
-6. `docs/architecture.md`
-7. `docs/phases.md`
-8. `AGENT.md`
+6. `docs/dod.md`
+7. `docs/test-policy.md`
+8. `docs/release-migration-policy.md`
+9. `docs/architecture.md`
+10. `docs/phases.md`
+11. `AGENT.md`
 
 補足:
 
 - `RULES.md` は最上位の運用ルール
 - `docs/requirements.md` は要件の基準
 - 各 guideline は領域ごとの実装判断基準
+- `docs/dod.md` は完了判断基準
+- `docs/runbook.md` は日常運用と切り分け手順
+- `docs/test-policy.md` はテスト追加判断基準
+- `docs/naming-conventions.md` は命名の基準
+- `docs/release-migration-policy.md` は変更の安全な進め方
+- `docs/adr/*` は設計判断の理由
+- `docs/current-status.md` は次セッションの入口
+- `docs/backlog-priority.md` は優先順の固定
+- `docs/known-issues.md` は既知制約の固定
+- `docs/glossary.md` は用語の固定
+- `CHANGELOG.md` は重要変更の要約
 - `AGENT.md` は開発者向けの入口
 
 ## How To Use
@@ -42,6 +67,8 @@
 
 - `AGENT.md`
 - `RULES.md`
+- `docs/current-status.md`
+- `docs/backlog-priority.md`
 - 今回の変更に関係する guideline
 
 例:
@@ -61,6 +88,9 @@
 - API を追加したら OpenAPI 更新対象か確認する
 - DB スキーマを変えたら migration / init SQL / ドキュメントの整合を確認する
 - Kubernetes 関連を変えたら Helm values で環境差分吸収できるか確認する
+- 重要な設計判断は ADR 化対象か確認する
+- 既知制約なら `docs/known-issues.md` 更新対象か確認する
+- 重要変更なら `CHANGELOG.md` 更新対象か確認する
 
 ### When Reviewing
 
@@ -70,6 +100,7 @@
 - 責務分離が崩れていないか
 - 初期スコープ外の複雑化が入っていないか
 - ドキュメント更新漏れがないか
+- `docs/dod.md` を満たしているか
 
 ## Update Policy
 
@@ -119,6 +150,87 @@
 - kind から実クラスタ移行戦略変更
 - リソース配分方針変更
 
+### dod.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 完了条件の見直し
+- PR で毎回確認すべき事項の変更
+
+### runbook.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 起動手順の変更
+- 障害切り分け手順の変更
+- 日常運用手順の追加
+
+### test-policy.md を更新する場合
+
+以下のような変更時に更新する。
+
+- テスト粒度や優先順位の変更
+- CI 対象の変更
+
+### naming-conventions.md を更新する場合
+
+以下のような変更時に更新する。
+
+- API / DB / code の命名方針変更
+- branch / commit 命名方針変更
+
+### release-migration-policy.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 破壊的変更の扱い変更
+- リリース / 移行の進め方変更
+
+### ADR を追加する場合
+
+以下のような変更時に追加する。
+
+- 重要な設計採用判断
+- 将来の実装方針へ長く影響する決定
+- 単純な実装差分ではなく、判断理由を残す価値が高い変更
+
+### current-status.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 主要機能が完了した
+- 現在フェーズが変わった
+- 次にやるべき優先事項が変わった
+
+### backlog-priority.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 優先順位を入れ替えた
+- 新しい高優先度 Issue を追加した
+
+### known-issues.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 既知の制約や不具合を見つけた
+- 既知課題が解消された
+
+### glossary.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 用語の意味がぶれそうな概念を追加した
+- 新しい内部概念や運用用語が増えた
+
+### CHANGELOG.md を更新する場合
+
+以下のような変更時に更新する。
+
+- 重要な機能追加
+- 重要な方針変更
+- 次セッションで把握すべき大きな変更
+
 ## Change Checklist
 
 変更内容ごとに、最低限以下を揃える。
@@ -148,6 +260,8 @@
 - `RULES.md` 更新
 - `docs/requirements.md` 更新
 - 必要なら `AGENT.md` 更新
+- 必要なら ADR 追加
+- 必要なら `CHANGELOG.md` 更新
 
 ## GitHub Workflow Usage
 
@@ -186,6 +300,9 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 - 初期スコープ外の複雑機能を黙って入れること
 - Compose 前提を壊す変更を無言で入れること
 - kind 専用実装を本番設計に埋め込むこと
+- 重要な判断理由を ADR に残さないこと
+- 現在地が変わったのに `docs/current-status.md` を放置すること
+- 既知課題を Issue や口頭だけに残して `docs/known-issues.md` に書かないこと
 
 ## Practical Workflow
 
@@ -196,8 +313,20 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 3. 対応する rule / guideline を読む
 4. 実装する
 5. 必要な docs を更新する
-6. 検証する
+6. `make verify` を実行する
 7. PR を作る
+
+## Session Continuity Rules
+
+新規セッションでも品質を維持するために、次を運用する。
+
+- セッション開始時に `docs/current-status.md` を確認する
+- 優先順位判断は `docs/backlog-priority.md` を使う
+- 既知制約は `docs/known-issues.md` を確認する
+- 用語の意味は `docs/glossary.md` を確認する
+- 大きな変更は `CHANGELOG.md` に残す
+- 標準検証は `make verify` を使う
+- コミットメッセージ規約は `docs/naming-conventions.md` を参照し、日本語で記述する
 
 ## Notes
 
