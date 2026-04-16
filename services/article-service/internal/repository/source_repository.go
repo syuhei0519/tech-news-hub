@@ -24,6 +24,7 @@ func (r *SourceRepository) List(ctx context.Context) ([]domain.Source, error) {
 		SELECT id, name, type, fetch_url, fetch_method, interval_minutes, default_category,
 		       is_enabled, last_fetched_at, last_fetch_status, last_error_message, created_at, updated_at
 		FROM sources
+		-- 一覧画面では最近触られた source を上に出す。
 		ORDER BY updated_at DESC, id DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("list sources: %w", err)
@@ -81,6 +82,7 @@ func (r *SourceRepository) Create(ctx context.Context, source domain.Source) (*d
 	if err != nil {
 		return nil, fmt.Errorf("create source last insert id: %w", err)
 	}
+	// DB の default 値と timestamp を含んだ正規形を返す。
 	return r.GetByID(ctx, id)
 }
 
@@ -185,6 +187,7 @@ func scanSource(scanner sourceScanner) (domain.Source, error) {
 	var lastFetchStatus sql.NullString
 	var lastErrorMessage sql.NullString
 
+	// source 一覧と詳細で同じ scan ロジックを使い、nullable 項目の扱いを揃える。
 	err := scanner.Scan(
 		&source.ID,
 		&source.Name,

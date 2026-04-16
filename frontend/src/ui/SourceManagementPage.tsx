@@ -46,6 +46,7 @@ export function SourceManagementPage() {
   const selectedSource = sourcesQuery.data?.find((source) => source.id === selectedSourceId) ?? null;
 
   useEffect(() => {
+    // 一覧で選択した source を編集フォームに同期し、新規作成時は初期値へ戻す。
     if (selectedSource) {
       form.reset(toFormValues(selectedSource));
       return;
@@ -74,6 +75,7 @@ export function SourceManagementPage() {
 
   const toggleMutation = useMutation({
     mutationFn: (source: Source) =>
+      // toggle 専用 API はまだ持たず、現状の完全更新 API を使って状態だけ切り替える。
       updateSource(source.id, {
         name: source.name,
         type: source.type,
@@ -197,6 +199,7 @@ export function SourceManagementPage() {
               {selectedSource ? `Edit: ${selectedSource.name}` : "Create Source"}
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">
+              {/* 削除は誤操作コストが高いため、まずは API のみ提供して UI からは外す。 */}
               Delete API は提供しますが、この画面からは実行しません。
             </p>
           </div>

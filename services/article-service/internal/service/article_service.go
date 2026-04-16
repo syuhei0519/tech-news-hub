@@ -95,6 +95,7 @@ func (s *ArticleService) UpdateSource(ctx context.Context, id int64, input Sourc
 	if err != nil {
 		return nil, err
 	}
+	// 更新時は handler 側で path id を受けるため、payload からは受けずここで上書きする。
 	source.ID = id
 	updated, err := s.sourceRepo.Update(ctx, source)
 	if err != nil {
@@ -171,6 +172,7 @@ func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestR
 	articles := make([]domain.Article, 0, len(req.Articles))
 	for _, item := range req.Articles {
 		category := item.Category
+		// source ごとの既定カテゴリで最低限の分類を維持する。
 		if category == "" {
 			category = req.Source.DefaultCategory
 		}
@@ -252,6 +254,7 @@ func sanitizeSourceInput(input SourceInput) (domain.Source, error) {
 	if err != nil {
 		return domain.Source{}, newServiceError(ErrValidation, "fetch_url must be a valid absolute URL")
 	}
+	// 現行 collector の取得経路に合わせ、http/https だけを受け付ける。
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
 		return domain.Source{}, newServiceError(ErrValidation, "fetch_url must use http or https")
 	}
@@ -265,6 +268,7 @@ func mapSourceError(err error) error {
 	case strings.Contains(message, "duplicate"):
 		return newServiceError(ErrConflict, "source already exists")
 	case strings.Contains(message, "referenced"):
+		// article / fetch_jobs から参照される source は即時削除できない。
 		return newServiceError(ErrConflict, "source is still referenced by related records")
 	default:
 		return err

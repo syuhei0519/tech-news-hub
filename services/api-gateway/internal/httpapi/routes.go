@@ -61,6 +61,7 @@ func proxyRequest(c *gin.Context, client *http.Client, targetURL string) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// gateway は透過プロキシとして振る舞い、header と body をそのまま upstream に渡す。
 	req.Header = c.Request.Header.Clone()
 
 	resp, err := client.Do(req)
