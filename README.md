@@ -80,6 +80,10 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 - `make up`: 全サービス起動
 - `make down`: volume を残して停止
 - `make reset`: volume を削除して初期化
+- `make dev-up`: frontend HMR と Go auto-reload 付きで起動
+- `make dev-down`: dev compose を停止
+- `make dev-logs`: dev compose のログ追跡
+- `make dev-ps`: dev compose の状態確認
 - `make build`: frontend build
 - `make test`: backend test
 - `make verify`: test + build + compose config check
@@ -89,3 +93,4 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 - 通常のコード変更では CI も `make verify` 相当を実行します
 - docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します
 - collector-service は `ARTICLE_SERVICE_URL` 経由で source 一覧を取得し、`is_enabled=true` の source を収集します
+- ローカルで即時反映が必要な場合は `docker-compose.dev.yml` を重ねる `make dev-up` を使います
