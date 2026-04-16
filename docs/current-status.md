@@ -8,38 +8,13 @@
 
 - 現在は Phase 4 の Compose / GitHub Actions / OpenAPI 整備まで実装済み
 
-## What Is Already Implemented
+## Working Snapshot
 
-- モノレポ構成
-- `article-service` の最小 API
-  - 記事一覧
-  - 記事詳細
-  - 検索
-  - collector 向け ingest API
-- `article-service` のソース管理 API
-  - ソース一覧
-  - ソース詳細
-  - ソース作成
-  - ソース更新
-  - ソース削除
-- `api-gateway` の最小プロキシ
-- `api-gateway` 経由のソース管理 API 公開
-- `collector-service` の最小 RSS 収集フロー
-- `collector-service` の source 管理 API 連携と実行時同期
-- `frontend` の記事一覧 / 詳細 / 検索画面
-- `frontend` の記事検索結果 CSV ダウンロード
-- `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
-- `frontend` の source 詳細と取得ジョブ履歴確認画面
-- `notification-service` の通知一覧 / 既読更新 API
-- `frontend` の通知一覧画面
-- RabbitMQ 経由の新着通知 / 取得失敗通知フロー
-- MySQL 初期スキーマ
-- Docker Compose のローカル運用整備
-- ルール / 要件 / ガイドライン / ADR のドキュメント群
-- GitHub Issue / PR テンプレート
-- GitHub Actions の最小 CI
-- collector-service / api-gateway の最小ユニットテスト
-- OpenAPI の公開 API 追従
+- 記事閲覧、検索、CSV 出力、既読 / お気に入り更新は実装済み
+- ソース管理、source 詳細、取得ジョブ履歴確認は実装済み
+- collector-service は source 管理 API と同期しながら RSS 収集と ingest を実行する
+- notification-service と frontend の通知一覧 / 既読更新は実装済み
+- Docker Compose、GitHub Actions、公開 OpenAPI 追従まで整備済み
 
 ## Verified State
 

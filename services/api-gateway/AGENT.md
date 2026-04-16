@@ -11,6 +11,7 @@
 - `internal/httpapi/middleware.go`
 - `internal/httpapi/routes_test.go`
 - `internal/app/app.go`
+- `../../docs/openapi/api-gateway.summary.md`
 
 ## Usually Skip
 
@@ -18,6 +19,7 @@
 - collector / notification の内部詳細
 
 ただし upstream 契約を変える場合は対象サービスの `AGENT.md` も開きます。
+schema や parameter まで変える場合は `../../docs/openapi/api-gateway.yaml` も開きます。
 
 ## Minimum Verification
 
