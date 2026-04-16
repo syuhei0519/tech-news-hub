@@ -1,26 +1,25 @@
 # AGENT.md
 
-## Responsibility
+## Read When
 
-`collector-service` は外部ソース収集と正規化を担当します。
+- RSS 取得、正規化、dedupe、ingest payload、source 同期を変えるとき
+- 収集トリガーや publish 処理を変えるとき
 
-- RSS などの外部データを取得する
-- 記事データを正規化し `dedupe_key` を生成する
-- article-service へ取り込みを依頼する
-- 必要に応じてイベントを発行する
+## Open First
 
-## Read First
+- `internal/collector/service.go`
+- `internal/collector/service_test.go`
+- `internal/collector/service_http_test.go`
+- `internal/httpapi/routes.go`
+- `internal/events/publisher.go`
 
-- `cmd/collector-service/main.go`: 起動エントリポイント
-- `internal/app/app.go`: 設定と初期化
-- `internal/httpapi/routes.go`: 実行トリガーの HTTP 入口
-- `internal/collector/service.go`: 収集と正規化の本体
-- `internal/events/publisher.go`: イベント発行
-- `internal/collector/service_test.go`: 収集ロジックの期待仕様
-- `internal/collector/service_http_test.go`: HTTP 経由の期待仕様
+## Usually Skip
 
-## Implementation Notes
+- frontend の UI 実装
+- notification-service の一覧 API
 
-- 収集ロジック変更時は dedupe の安定性を崩さない
-- article-service への投入契約を変える場合は両サービスを同時に確認する
-- 外部入力の揺れは `internal/collector/service.go` で吸収する
+ただし ingest 契約を変える場合は article-service を同時に確認します。
+
+## Minimum Verification
+
+- `cd services/collector-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...`
