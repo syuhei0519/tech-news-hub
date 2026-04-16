@@ -15,7 +15,7 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 
 ## Current Status
 
-Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能も実装済みです。
+Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能と Phase 3 の最初の非同期通知経路を実装済みです。
 
 - article-service / collector-service / api-gateway / frontend
 - MySQL 接続
@@ -24,10 +24,12 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能も実装�
 - ソース管理
 - 記事検索結果の CSV 出力
 - 取得ジョブ履歴の表示
+- RabbitMQ 経由の通知生成
+- 通知一覧 / 既読更新
 
 現在地:
 
-- Phase 2 の主要機能実装が完了し、Phase 3 着手前
+- Phase 3 の notification-service / RabbitMQ 連携が実装済み
 - collector-service はまだ静的 source 設定依存
 - 検証状態の詳細は `docs/current-status.md` を参照
 

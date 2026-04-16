@@ -15,6 +15,14 @@
 - `notification-service` 停止時も既存記事閲覧は継続
 - Phase 1 は共有 MySQL だが、サービス単位のアクセス責務を分離する
 
+## Async Notifications
+
+- RabbitMQ を topic exchange として使い、`article.ingested` と `collector.fetch.failed` を流す
+- `article-service` は ingest 成功時に新着通知イベントを publish する
+- `collector-service` は取得失敗時に失敗通知イベントを publish する
+- `notification-service` はイベントを購読し、通知レコードを生成して公開 API で返す
+- RabbitMQ または `notification-service` の障害は記事閲覧 API の可用性より優先しない
+
 ## Kubernetes Readiness
 
 - コンテナ設定は環境変数で外出し
