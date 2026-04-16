@@ -177,6 +177,8 @@
 ### Pull Request
 
 - `.github/pull_request_template.md` を使う
+- GitHub API / MCP 経由の PR 作成では template 自動挿入を期待しない
+- PR 本文は template の見出しを保ったまま埋める
 - `Scope`
 - `Verification`
 - `API / DB / Infra Impact`

@@ -27,6 +27,18 @@
 
 - 高い
 
+### Component Test
+
+対象:
+
+- frontend の主要画面
+- API client の query / payload 組み立て
+- mutation 後の画面同期
+
+優先度:
+
+- 高い
+
 ### Integration Test
 
 対象:
@@ -50,6 +62,18 @@
 優先度:
 
 - 中
+
+### Contract Test
+
+対象:
+
+- api-gateway ↔ article-service / notification-service
+- collector-service ↔ article-service internal API
+- RabbitMQ event payload ↔ notification-service
+
+優先度:
+
+- 高い
 
 ## Minimum Expectations By Area
 
@@ -81,6 +105,9 @@
 - 検索フォーム
 - API レスポンスに対する表示
 - 失敗表示
+- 記事詳細の既読 / お気に入り更新
+- 通知一覧の既読更新
+- source 管理フォームと source 詳細
 
 ## When Tests Are Required
 
@@ -92,6 +119,8 @@
 - CSV 出力ロジック変更
 - collector の正規化ルール変更
 - 通知イベント契約変更
+- frontend の検索条件、mutation、画面導線変更
+- service 間 request / response 仕様変更
 
 ## When A Test May Be Deferred
 
@@ -120,9 +149,20 @@
 
 将来的に追加候補:
 
-- API integration test
-- DB migration validation
+- MySQL integration test の常時実行拡張
+- API / event contract test
+- frontend component test
 - kind smoke test
+
+## Phase 4.5 Priority
+
+Phase 5 より前に、次を優先して整備する。
+
+1. article-service の repository / handler / MySQL integration test
+2. frontend の記事一覧 / 詳細導線の component test
+3. notification / source 管理周辺の test
+4. collector のデータ揺れケースと service 間 contract test
+5. 最小 E2E と CI への組み込み
 
 ## Test Data Policy
 

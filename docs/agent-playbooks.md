@@ -36,6 +36,7 @@
 ### Verification
 
 - リンク先、コマンド、ファイル名の整合だけ確認する
+- PR を作る場合は `.github/pull_request_template.md` を開き、GitHub API / MCP 作成時も本文を手動で組み立てる
 
 ## Frontend UI Change
 
