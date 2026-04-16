@@ -9,18 +9,18 @@
 ### Now
 
 1. collector-service の動的ソース同期
-2. `#8` notification-service と RabbitMQ 連携の実装
-3. `#5` Compose 整備、GitHub Actions、OpenAPI 保守
+2. `#7` kind デプロイ、Helm Chart、Argo CD の整備
+3. `#6` Proxmox クラスタ移行、永続化、監視拡張
 
 ### Next
 
-4. `#7` kind デプロイ、Helm Chart、Argo CD の整備
-5. `#6` Proxmox クラスタ移行、永続化、監視拡張
+4. 認証導入
+5. 監視基盤の詳細設計
 
 ### Later
 
-6. 認証導入
-7. 監視基盤の詳細設計
+6. バックアップ / リストア運用の整理
+7. collector の収集戦略拡張
 
 ## Priority Rules
 

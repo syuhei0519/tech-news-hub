@@ -51,7 +51,7 @@
 
 ## Current Phase
 
-現在は Phase 2 の主要機能実装が完了し、Phase 3 着手前です。
+現在は Phase 4 の Compose / CI / OpenAPI 整備まで実装済みです。
 
 Phase 1 で完了した範囲:
 
@@ -69,15 +69,27 @@ Phase 2 で完了した範囲:
 - CSV 出力
 - 取得ジョブ履歴
 
+Phase 3 で完了した範囲:
+
+- notification-service
+- RabbitMQ 連携
+- 新着通知と取得失敗通知
+
+Phase 4 で完了した範囲:
+
+- Docker Compose のローカル運用整備
+- GitHub Actions の最小 CI
+- OpenAPI の公開 API 追従
+
 現在の残課題:
 
 - collector-service はまだ静的設定ベースで、source 管理 API とは未連携
 
-次フェーズでは以下を追加します。
+次に優先して進める内容は以下です。
 
-- notification-service の実装
-- RabbitMQ 連携
-- 取得失敗通知とダイジェストの導入
+- collector-service の動的ソース同期
+- kind / Helm / Argo CD の整備
+- Proxmox クラスタ移行、永続化、監視拡張
 
 ## Service Responsibilities
 
@@ -140,6 +152,12 @@ make up
 
 ```bash
 make down
+```
+
+volume も含めて初期化したい場合:
+
+```bash
+make reset
 ```
 
 ## Verification
@@ -231,7 +249,7 @@ npm run build
 
 次に着手する優先順は以下です。
 
-1. notification-service と RabbitMQ 連携を実装
-2. collector-service の動的ソース同期を進める
-3. Compose 整備、GitHub Actions、OpenAPI 保守を進める
-4. kind / Helm / Argo CD の整備に着手する
+1. collector-service の動的ソース同期を進める
+2. kind / Helm / Argo CD の整備に着手する
+3. Proxmox クラスタ移行、永続化、監視拡張を進める
+4. 認証導入の前提整理を進める

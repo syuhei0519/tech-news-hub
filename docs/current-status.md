@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-- 現在は Phase 3 の notification-service / RabbitMQ 連携まで実装済み
+- 現在は Phase 4 の Compose / GitHub Actions / OpenAPI 整備まで実装済み
 
 ## What Is Already Implemented
 
@@ -33,11 +33,12 @@
 - `frontend` の通知一覧画面
 - RabbitMQ 経由の新着通知 / 取得失敗通知フロー
 - MySQL 初期スキーマ
-- Docker Compose 起動基盤
+- Docker Compose のローカル運用整備
 - ルール / 要件 / ガイドライン / ADR のドキュメント群
 - GitHub Issue / PR テンプレート
 - GitHub Actions の最小 CI
 - collector-service / api-gateway の最小ユニットテスト
+- OpenAPI の公開 API 追従
 
 ## Verified State
 
@@ -49,13 +50,12 @@
 ## Highest Priority Next
 
 1. collector-service の動的ソース同期
-2. Compose 整備、GitHub Actions、OpenAPI 保守
-3. kind / Helm / Argo CD の整備
-4. Proxmox クラスタ移行、永続化、監視拡張
+2. kind / Helm / Argo CD の整備
+3. Proxmox クラスタ移行、永続化、監視拡張
+4. 認証導入の設計整理
 
 ## Open GitHub Issues
 
-- `#5` `[Phase 4] Compose 整備、GitHub Actions、OpenAPI 保守`
 - `#7` `[Phase 5] kind デプロイ、Helm Chart、Argo CD の整備`
 - `#6` `[Phase 6] Proxmox クラスタ移行、永続化、監視拡張`
 
