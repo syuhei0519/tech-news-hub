@@ -17,10 +17,14 @@ func Run() error {
 	if articleServiceURL == "" {
 		return fmt.Errorf("ARTICLE_SERVICE_URL is required")
 	}
+	notificationServiceURL := os.Getenv("NOTIFICATION_SERVICE_URL")
+	if notificationServiceURL == "" {
+		return fmt.Errorf("NOTIFICATION_SERVICE_URL is required")
+	}
 
 	router := gin.Default()
 	router.Use(httpapi.RequestLogger())
-	httpapi.RegisterRoutes(router, articleServiceURL)
+	httpapi.RegisterRoutes(router, articleServiceURL, notificationServiceURL)
 
 	server := &http.Server{
 		Addr:              ":" + port,

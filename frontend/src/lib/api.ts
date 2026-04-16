@@ -76,6 +76,28 @@ export type ListFetchJobsResponse = {
   total_pages: number;
 };
 
+export type Notification = {
+  id: number;
+  event_id: string;
+  event_type: "article.ingested" | "collector.fetch.failed";
+  level: "info" | "error";
+  title: string;
+  body: string;
+  source_id: number | null;
+  fetch_job_id: number | null;
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
+};
+
+export type ListNotificationsResponse = {
+  items: Notification[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export type ArticleQueryParams = {
   q?: string;
   category?: string;
@@ -139,6 +161,20 @@ export async function fetchFetchJobs(params: {
   page_size?: number;
 }) {
   const response = await api.get<ListFetchJobsResponse>("/api/v1/fetch-jobs", { params });
+  return response.data;
+}
+
+export async function fetchNotifications(params: {
+  is_read?: boolean;
+  page?: number;
+  page_size?: number;
+}) {
+  const response = await api.get<ListNotificationsResponse>("/api/v1/notifications", { params });
+  return response.data;
+}
+
+export async function updateNotificationReadStatus(id: number, isRead: boolean) {
+  const response = await api.patch<Notification>(`/api/v1/notifications/${id}/read-status`, { is_read: isRead });
   return response.data;
 }
 

@@ -163,6 +163,41 @@ func TestProxyRequestForwardsFetchJobsQuery(t *testing.T) {
 	}
 }
 
+func TestProxyRequestForwardsNotificationsQuery(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path != "/api/v1/notifications" {
+				t.Fatalf("unexpected path: %s", req.URL.Path)
+			}
+			if got := req.URL.Query().Get("is_read"); got != "false" {
+				t.Fatalf("unexpected is_read: %s", got)
+			}
+			if got := req.URL.Query().Get("page"); got != "2" {
+				t.Fatalf("unexpected page: %s", got)
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"items":[],"total":0,"page":2,"page_size":20,"total_pages":0}`)),
+			}, nil
+		}),
+	}
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/notifications?is_read=false&page=2", nil)
+
+	proxyRequest(c, client, "http://notification-service/api/v1/notifications")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusOK)
+	}
+}
+
 func TestProxyCSVDownloadSetsAttachmentHeaders(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
