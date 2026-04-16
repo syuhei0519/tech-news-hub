@@ -18,6 +18,21 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: tech-feed-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   article-service:
     build:
       context: .
@@ -25,10 +40,14 @@ services:
     environment:
       PORT: 8081
       MYSQL_DSN: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=true
+      AMQP_URL: ${RABBITMQ_URL}
+      AMQP_EXCHANGE: tech-feed.events
     ports:
       - "${ARTICLE_SERVICE_PORT}:8081"
     depends_on:
       mysql:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   api-gateway:
@@ -38,11 +57,13 @@ services:
     environment:
       PORT: 8080
       ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_BASE_URL}
+      NOTIFICATION_SERVICE_URL: ${NOTIFICATION_SERVICE_BASE_URL}
       JWT_SECRET: local-dev-secret
     ports:
       - "${API_GATEWAY_PORT}:8080"
     depends_on:
       - article-service
+      - notification-service
 
   collector-service:
     build:
@@ -51,6 +72,8 @@ services:
     environment:
       PORT: 8082
       ARTICLE_SERVICE_URL: ${ARTICLE_SERVICE_BASE_URL}
+      AMQP_URL: ${RABBITMQ_URL}
+      AMQP_EXCHANGE: tech-feed.events
       COLLECTOR_SOURCES_JSON: |
         [
           {
@@ -70,6 +93,7 @@ services:
       - "${COLLECTOR_SERVICE_PORT}:8082"
     depends_on:
       - article-service
+      - rabbitmq
 
   notification-service:
     build:
@@ -77,8 +101,17 @@ services:
       dockerfile: deployments/docker/notification-service.Dockerfile
     environment:
       PORT: 8083
+      MYSQL_DSN: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(mysql:3306)/${MYSQL_DATABASE}?parseTime=true
+      AMQP_URL: ${RABBITMQ_URL}
+      AMQP_EXCHANGE: tech-feed.events
+      AMQP_QUEUE_NAME: notification-service
     ports:
       - "${NOTIFICATION_SERVICE_PORT}:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   frontend:
     build:

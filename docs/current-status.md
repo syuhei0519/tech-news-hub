@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-- 現在は Phase 2 の主要機能実装が完了し、Phase 3 着手前
+- 現在は Phase 3 の notification-service / RabbitMQ 連携まで実装済み
 
 ## What Is Already Implemented
 
@@ -29,6 +29,9 @@
 - `frontend` の記事検索結果 CSV ダウンロード
 - `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
 - `frontend` の source 詳細と取得ジョブ履歴確認画面
+- `notification-service` の通知一覧 / 既読更新 API
+- `frontend` の通知一覧画面
+- RabbitMQ 経由の新着通知 / 取得失敗通知フロー
 - MySQL 初期スキーマ
 - Docker Compose 起動基盤
 - ルール / 要件 / ガイドライン / ADR のドキュメント群
@@ -45,14 +48,13 @@
 
 ## Highest Priority Next
 
-1. notification-service と RabbitMQ 連携
-2. collector-service の動的ソース同期
-3. Compose 整備、GitHub Actions、OpenAPI 保守
-4. kind / Helm / Argo CD の整備
+1. collector-service の動的ソース同期
+2. Compose 整備、GitHub Actions、OpenAPI 保守
+3. kind / Helm / Argo CD の整備
+4. Proxmox クラスタ移行、永続化、監視拡張
 
 ## Open GitHub Issues
 
-- `#8` `[Phase 3] notification-service と RabbitMQ 連携の実装`
 - `#5` `[Phase 4] Compose 整備、GitHub Actions、OpenAPI 保守`
 - `#7` `[Phase 5] kind デプロイ、Helm Chart、Argo CD の整備`
 - `#6` `[Phase 6] Proxmox クラスタ移行、永続化、監視拡張`
@@ -61,7 +63,6 @@
 
 - ソース管理 UI/API とジョブ履歴 UI/API は実装済みだが、collector-service はまだ静的設定依存
 - 認証は未実装
-- Notification と RabbitMQ は未実装
 - kind / Helm / Argo CD は未着手
 
 ## Update Rules

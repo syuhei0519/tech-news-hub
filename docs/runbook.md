@@ -13,6 +13,11 @@ cp .env.example .env
 docker compose config -q
 ```
 
+補足:
+
+- RabbitMQ 管理 UI は `http://localhost:15672`
+- 認証情報は `.env` の `RABBITMQ_USER`, `RABBITMQ_PASSWORD`
+
 ### Start
 
 ```bash
@@ -92,6 +97,17 @@ docker compose config -q
 - dedupe / DB 制約で失敗していないか
 - fetch_jobs と source status が更新されているか
 - UI では `/sources/:id` のジョブ履歴画面で失敗メッセージを確認できるか
+- UI では `/notifications` に failure 通知が出ているか
+
+### Notification Delay / Missing
+
+確認すること:
+
+- RabbitMQ が起動しているか
+- `notification-service` が起動しているか
+- RabbitMQ 管理 UI で queue / message が滞留していないか
+- `notifications` テーブルにレコードが入っているか
+- `article-service`, `collector-service` の publish error ログが出ていないか
 
 ### CSV Export Mismatch
 

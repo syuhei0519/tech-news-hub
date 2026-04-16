@@ -9,9 +9,12 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"tech-feed-hub/collector-service/internal/events"
 )
 
 type SourceConfig struct {
@@ -76,6 +79,7 @@ type Service struct {
 	client            *http.Client
 	articleServiceURL string
 	sources           []SourceConfig
+	publisher         events.EventPublisher
 }
 
 func NewService(articleServiceURL string, sources []SourceConfig) *Service {
@@ -83,7 +87,16 @@ func NewService(articleServiceURL string, sources []SourceConfig) *Service {
 		client:            &http.Client{Timeout: 20 * time.Second},
 		articleServiceURL: articleServiceURL,
 		sources:           sources,
+		publisher:         events.NopPublisher{},
 	}
+}
+
+func (s *Service) SetEventPublisher(publisher events.EventPublisher) {
+	if publisher == nil {
+		s.publisher = events.NopPublisher{}
+		return
+	}
+	s.publisher = publisher
 }
 
 func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
@@ -108,15 +121,7 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 
 	items, err := s.fetchRSS(ctx, source)
 	if err != nil {
-		// 取得失敗も UI から見えることが Issue #2 の主目的なので、失敗時は必ず finish を打つ。
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(err.Error()),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, err
+		return RunResult{}, s.handleFailure(ctx, started, source, err)
 	}
 
 	payload := IngestPayload{
@@ -135,53 +140,25 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(fmt.Sprintf("marshal ingest payload: %v", err)),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, fmt.Errorf("marshal ingest payload: %w", err)
+		return RunResult{}, s.handleFailure(ctx, started, source, fmt.Errorf("marshal ingest payload: %w", err))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.articleServiceURL+"/internal/ingest", bytes.NewReader(body))
 	if err != nil {
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(fmt.Sprintf("create ingest request: %v", err)),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, fmt.Errorf("create ingest request: %w", err)
+		return RunResult{}, s.handleFailure(ctx, started, source, fmt.Errorf("create ingest request: %w", err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(fmt.Sprintf("send ingest request: %v", err)),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, fmt.Errorf("send ingest request: %w", err)
+		return RunResult{}, s.handleFailure(ctx, started, source, fmt.Errorf("send ingest request: %w", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		raw, _ := io.ReadAll(resp.Body)
 		message := fmt.Sprintf("ingest failed: status=%d body=%s", resp.StatusCode, string(raw))
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(message),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, fmt.Errorf("%s", message)
+		return RunResult{}, s.handleFailure(ctx, started, source, fmt.Errorf("%s", message))
 	}
 
 	var ingestResult struct {
@@ -189,14 +166,7 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 		DuplicatedCount int `json:"duplicated_count"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&ingestResult); err != nil {
-		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
-			Status:       "failed",
-			ErrorMessage: stringPtr(fmt.Sprintf("decode ingest response: %v", err)),
-		})
-		if finishErr != nil {
-			return RunResult{}, finishErr
-		}
-		return RunResult{}, fmt.Errorf("decode ingest response: %w", err)
+		return RunResult{}, s.handleFailure(ctx, started, source, fmt.Errorf("decode ingest response: %w", err))
 	}
 
 	// article-service 側で集計した件数を finish に渡し、履歴一覧と source 状態の数字を揃える。
@@ -277,6 +247,27 @@ type finishFetchJobPayload struct {
 	InsertedCount   int     `json:"inserted_count"`
 	DuplicatedCount int     `json:"duplicated_count"`
 	ErrorMessage    *string `json:"error_message"`
+}
+
+func (s *Service) handleFailure(ctx context.Context, started startFetchJobResult, source SourceConfig, cause error) error {
+	// 取得失敗も UI から見えることが重要なので、失敗時は必ず finish を打つ。
+	if err := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+		Status:       "failed",
+		ErrorMessage: stringPtr(cause.Error()),
+	}); err != nil {
+		return err
+	}
+
+	if err := s.publisher.PublishFetchFailed(ctx, events.FetchFailedPayload{
+		JobID:        started.JobID,
+		SourceID:     started.SourceID,
+		SourceName:   source.Name,
+		ErrorMessage: cause.Error(),
+	}); err != nil {
+		log.Printf("publish collector.fetch.failed event: %v", err)
+	}
+
+	return cause
 }
 
 func (s *Service) finishFetchJob(ctx context.Context, jobID int64, payload finishFetchJobPayload) error {

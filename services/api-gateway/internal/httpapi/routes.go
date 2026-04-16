@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(router *gin.Engine, articleServiceURL string) {
+func RegisterRoutes(router *gin.Engine, articleServiceURL string, notificationServiceURL string) {
 	client := &http.Client{}
 
 	router.GET("/health", func(c *gin.Context) {
@@ -44,6 +44,14 @@ func RegisterRoutes(router *gin.Engine, articleServiceURL string) {
 		})
 		v1.GET("/fetch-jobs", func(c *gin.Context) {
 			targetURL := articleServiceURL + "/api/v1/fetch-jobs"
+			proxyRequest(c, client, targetURL)
+		})
+		v1.GET("/notifications", func(c *gin.Context) {
+			targetURL := notificationServiceURL + "/api/v1/notifications"
+			proxyRequest(c, client, targetURL)
+		})
+		v1.PATCH("/notifications/:id/read-status", func(c *gin.Context) {
+			targetURL := notificationServiceURL + "/api/v1/notifications/" + c.Param("id") + "/read-status"
 			proxyRequest(c, client, targetURL)
 		})
 		v1.GET("/exports/articles.csv", func(c *gin.Context) {
