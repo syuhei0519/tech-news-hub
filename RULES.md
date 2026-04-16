@@ -124,6 +124,7 @@
 - `.env` はコミットしない
 - `.env.example` は常に最新に保つ
 - Git のコミットメッセージは日本語で記述する
+- Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
 - 明示的な指示がない限り `main` へ直接 push しない
 - 基本運用は feature branch + Pull Request とする
 - release branch は明示的な指示がない限り切らない
