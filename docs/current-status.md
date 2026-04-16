@@ -27,6 +27,7 @@
 - `collector-service` の最小 RSS 収集フロー
 - `frontend` の記事一覧 / 詳細 / 検索画面
 - `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
+- `frontend` の source 詳細と取得ジョブ履歴確認画面
 - MySQL 初期スキーマ
 - Docker Compose 起動基盤
 - ルール / 要件 / ガイドライン / ADR のドキュメント群
@@ -43,10 +44,10 @@
 
 ## Highest Priority Next
 
-1. 取得ジョブ履歴と失敗状況の可視化
-2. 既読 / お気に入り管理
-3. CSV 出力
-4. collector-service のソース管理連携
+1. 既読 / お気に入り管理
+2. CSV 出力
+3. collector-service のソース管理連携
+4. notification-service と RabbitMQ 連携
 
 ## Open GitHub Issues
 
@@ -60,7 +61,7 @@
 
 ## Known Gaps
 
-- ソース管理 UI/API は実装済みだが、collector-service はまだ静的設定依存
+- ソース管理 UI/API とジョブ履歴 UI/API は実装済みだが、collector-service はまだ静的設定依存
 - 認証は未実装
 - 既読 / お気に入りは未実装
 - CSV 出力は未実装

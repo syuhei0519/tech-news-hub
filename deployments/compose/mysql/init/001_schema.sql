@@ -48,5 +48,6 @@ CREATE TABLE IF NOT EXISTS fetch_jobs (
   duplicated_count INT NOT NULL DEFAULT 0,
   error_message TEXT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_fetch_jobs_source_status_started (source_id, status, started_at, id),
   CONSTRAINT fk_fetch_jobs_source_id FOREIGN KEY (source_id) REFERENCES sources(id)
 );

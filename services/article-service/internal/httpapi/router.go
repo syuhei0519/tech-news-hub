@@ -90,6 +90,26 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 			c.JSON(http.StatusOK, source)
 		})
 
+		v1.GET("/fetch-jobs", func(c *gin.Context) {
+			sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
+			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
+
+			// source 詳細画面の一覧要件をそのまま受けるだけに留め、絞り込み仕様は service 側で統一する。
+			result, err := articleService.ListFetchJobs(c.Request.Context(), domain.ListFetchJobsParams{
+				SourceID: sourceID,
+				Status:   c.Query("status"),
+				Page:     page,
+				PageSize: pageSize,
+			})
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, result)
+		})
+
 		v1.POST("/sources", func(c *gin.Context) {
 			var req service.SourceInput
 			if err := c.ShouldBindJSON(&req); err != nil {
@@ -141,6 +161,40 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 
 	internal := router.Group("/internal")
 	{
+		internal.POST("/fetch-jobs/start", func(c *gin.Context) {
+			var req service.StartFetchJobInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			result, err := articleService.StartFetchJob(c.Request.Context(), req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusAccepted, result)
+		})
+
+		internal.POST("/fetch-jobs/:id/finish", func(c *gin.Context) {
+			jobID, err := parseIDParam(c, "fetch job id")
+			if err != nil {
+				return
+			}
+
+			var req service.FinishFetchJobInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err := articleService.FinishFetchJob(c.Request.Context(), jobID, req); err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.Status(http.StatusNoContent)
+		})
+
 		internal.POST("/ingest", func(c *gin.Context) {
 			var req service.IngestRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
@@ -148,6 +202,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 				return
 			}
 
+			// ingest 単体の失敗は collector が finish API で閉じるため、ここでは記事登録結果だけ返す。
 			result, err := articleService.Ingest(c.Request.Context(), req)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
