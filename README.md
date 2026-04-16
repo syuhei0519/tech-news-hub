@@ -15,7 +15,7 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 
 ## Current Status
 
-Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能と Phase 3 の最初の非同期通知経路を実装済みです。
+Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3 の通知経路、Phase 4 の基盤整備を実装済みです。
 
 - article-service / collector-service / api-gateway / frontend
 - MySQL 接続
@@ -26,10 +26,13 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能と Phase 
 - 取得ジョブ履歴の表示
 - RabbitMQ 経由の通知生成
 - 通知一覧 / 既読更新
+- Docker Compose のローカル運用整備
+- GitHub Actions の最小 CI
+- OpenAPI の公開 API 追従
 
 現在地:
 
-- Phase 3 の notification-service / RabbitMQ 連携が実装済み
+- Phase 4 の Compose / CI / OpenAPI 整備まで実装済み
 - collector-service はまだ静的 source 設定依存
 - 検証状態の詳細は `docs/current-status.md` を参照
 
@@ -72,6 +75,9 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能と Phase 
 
 ## Standard Commands
 
+- `make up`: 全サービス起動
+- `make down`: volume を残して停止
+- `make reset`: volume を削除して初期化
 - `make build`: frontend build
 - `make test`: backend test
 - `make verify`: test + build + compose config check
@@ -80,3 +86,4 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能と Phase 
 
 - 通常のコード変更では CI も `make verify` 相当を実行します
 - docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します
+- collector-service の source 定義は現時点では Compose 上の静的設定です

@@ -19,12 +19,6 @@
 - api-gateway に JWT の導入ポイントはあるが、実装は未着手
 - 初期は単一ユーザー前提のため後ろ倒し
 
-### Notification Flow Is Not Implemented Yet
-
-- notification-service は health endpoint のみ
-- RabbitMQ も未接続
-- Phase 3 の `#8` で対応予定
-
 ### Kubernetes Delivery Is Not Implemented Yet
 
 - `deployments/k8s` はプレースホルダのみ
