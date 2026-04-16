@@ -19,16 +19,36 @@ func RegisterRoutes(router *gin.Engine, articleServiceURL string) {
 	{
 		v1.GET("/articles", func(c *gin.Context) {
 			targetURL := articleServiceURL + "/api/v1/articles"
-			proxyGet(c, client, targetURL)
+			proxyRequest(c, client, targetURL)
 		})
 		v1.GET("/articles/:id", func(c *gin.Context) {
 			targetURL := articleServiceURL + "/api/v1/articles/" + c.Param("id")
-			proxyGet(c, client, targetURL)
+			proxyRequest(c, client, targetURL)
+		})
+		v1.GET("/sources", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/sources"
+			proxyRequest(c, client, targetURL)
+		})
+		v1.GET("/sources/:id", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/sources/" + c.Param("id")
+			proxyRequest(c, client, targetURL)
+		})
+		v1.POST("/sources", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/sources"
+			proxyRequest(c, client, targetURL)
+		})
+		v1.PATCH("/sources/:id", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/sources/" + c.Param("id")
+			proxyRequest(c, client, targetURL)
+		})
+		v1.DELETE("/sources/:id", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/sources/" + c.Param("id")
+			proxyRequest(c, client, targetURL)
 		})
 	}
 }
 
-func proxyGet(c *gin.Context, client *http.Client, targetURL string) {
+func proxyRequest(c *gin.Context, client *http.Client, targetURL string) {
 	parsed, err := url.Parse(targetURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -36,11 +56,13 @@ func proxyGet(c *gin.Context, client *http.Client, targetURL string) {
 	}
 	parsed.RawQuery = c.Request.URL.RawQuery
 
-	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, parsed.String(), nil)
+	req, err := http.NewRequestWithContext(c.Request.Context(), c.Request.Method, parsed.String(), c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// gateway は透過プロキシとして振る舞い、header と body をそのまま upstream に渡す。
+	req.Header = c.Request.Header.Clone()
 
 	resp, err := client.Do(req)
 	if err != nil {

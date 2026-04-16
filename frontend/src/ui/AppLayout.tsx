@@ -9,8 +9,11 @@ export function AppLayout() {
             Tech Feed Hub
           </Link>
           <nav className="flex gap-6 text-sm text-slate-300">
-            <NavLink to="/" className="hover:text-white">
+            <NavLink to="/" end className={({ isActive }) => navLinkClassName(isActive)}>
               Articles
+            </NavLink>
+            <NavLink to="/sources" className={({ isActive }) => navLinkClassName(isActive)}>
+              Sources
             </NavLink>
           </nav>
         </div>
@@ -20,4 +23,8 @@ export function AppLayout() {
       </main>
     </div>
   );
+}
+
+function navLinkClassName(isActive: boolean) {
+  return isActive ? "text-white" : "transition hover:text-white";
 }

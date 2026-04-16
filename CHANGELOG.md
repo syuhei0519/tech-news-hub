@@ -7,9 +7,14 @@
 ### Changed
 
 - `AGENT.md` と `README.md` の現在地を Phase 1 完了後の状態に同期
+- `docs/current-status.md` と `docs/known-issues.md` をソース管理実装後の状態に更新
 
 ### Added
 
+- article-service のソース管理 CRUD API
+- api-gateway 経由のソース管理 API 公開
+- frontend のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
+- source API を含む OpenAPI 定義
 - ルール運用のためのドキュメント群
 - API / DB / Kubernetes ガイドライン
 - Definition of Done
