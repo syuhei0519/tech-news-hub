@@ -234,6 +234,9 @@ npm run build
 - Git のコミットメッセージは日本語で記述する
 - Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
 - Pull Request 作成時は `.github/pull_request_template.md` を使い、各項目を実施内容に合わせて埋める
+- Pull Request 作成前に `.github/pull_request_template.md` を必ず開いて内容を確認する
+- GitHub API / MCP で Pull Request を作成する場合、テンプレートは自動適用されない前提で扱い、テンプレートを元にした本文を自分で組み立てて渡す
+- Pull Request 作成直後に、題名が日本語であることと、本文がテンプレートの主要項目を満たしていることを確認し、不足があればその場で更新する
 
 ## Documentation Update Rules
 
