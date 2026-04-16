@@ -33,7 +33,7 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 現在地:
 
 - Phase 4 の Compose / CI / OpenAPI 整備まで実装済み
-- collector-service はまだ静的 source 設定依存
+- collector-service は article-service の source 管理 API から実行時に収集対象を同期
 - 検証状態の詳細は `docs/current-status.md` を参照
 
 ## Planned Repository Structure
@@ -86,4 +86,4 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 
 - 通常のコード変更では CI も `make verify` 相当を実行します
 - docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します
-- collector-service の source 定義は現時点では Compose 上の静的設定です
+- collector-service は `ARTICLE_SERVICE_URL` 経由で source 一覧を取得し、`is_enabled=true` の source を収集します

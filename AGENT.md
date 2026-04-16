@@ -83,11 +83,11 @@ Phase 4 で完了した範囲:
 
 現在の残課題:
 
-- collector-service はまだ静的設定ベースで、source 管理 API とは未連携
+- kind / Helm / Argo CD の整備
+- Proxmox クラスタ移行、永続化、監視拡張
 
 次に優先して進める内容は以下です。
 
-- collector-service の動的ソース同期
 - kind / Helm / Argo CD の整備
 - Proxmox クラスタ移行、永続化、監視拡張
 
@@ -253,7 +253,7 @@ npm run build
 
 次に着手する優先順は以下です。
 
-1. collector-service の動的ソース同期を進める
-2. kind / Helm / Argo CD の整備に着手する
-3. Proxmox クラスタ移行、永続化、監視拡張を進める
-4. 認証導入の前提整理を進める
+1. kind / Helm / Argo CD の整備に着手する
+2. Proxmox クラスタ移行、永続化、監視拡張を進める
+3. 認証導入の前提整理を進める
+4. collector の収集戦略拡張を進める

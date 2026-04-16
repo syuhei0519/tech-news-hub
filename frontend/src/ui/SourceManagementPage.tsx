@@ -105,8 +105,8 @@ export function SourceManagementPage() {
           <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Phase 2</p>
           <h1 className="text-4xl font-semibold tracking-tight text-white">収集ソース管理</h1>
           <p className="max-w-3xl text-sm leading-6 text-slate-300">
-            ソース一覧、作成、編集、有効/無効切り替えを行います。現在の collector-service は静的設定のままなので、
-            ここでの変更は収集対象へはまだ自動反映されません。
+            ソース一覧、作成、編集、有効/無効切り替えを行います。collector-service はこの一覧を実行時に参照するため、
+            ここでの変更は次回収集から反映されます。
           </p>
         </div>
       </section>

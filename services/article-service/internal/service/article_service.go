@@ -377,7 +377,8 @@ func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestR
 }
 
 type StartFetchJobInput struct {
-	Source IngestSourceInput `json:"source"`
+	SourceID int64             `json:"source_id"`
+	Source   IngestSourceInput `json:"source"`
 }
 
 type StartFetchJobResult struct {
@@ -386,17 +387,35 @@ type StartFetchJobResult struct {
 }
 
 func (s *ArticleService) StartFetchJob(ctx context.Context, input StartFetchJobInput) (StartFetchJobResult, error) {
-	// collector は source 管理とまだ直結していないため、静的設定の source でも同じ入口で解決する。
-	sourceID, err := s.sourceRepo.EnsureSource(ctx, domain.Source{
-		Name:            input.Source.Name,
-		Type:            input.Source.Type,
-		FetchURL:        input.Source.FetchURL,
-		FetchMethod:     input.Source.FetchMethod,
-		IntervalMinutes: input.Source.IntervalMinutes,
-		DefaultCategory: input.Source.DefaultCategory,
-	})
-	if err != nil {
-		return StartFetchJobResult{}, err
+	var sourceID int64
+	if input.SourceID > 0 {
+		// source 一覧 API で解決済みの ID が来た場合は、それを job 作成にそのまま使う。
+		source, err := s.sourceRepo.GetByID(ctx, input.SourceID)
+		if err != nil {
+			return StartFetchJobResult{}, err
+		}
+		if source == nil {
+			return StartFetchJobResult{}, newServiceError(ErrNotFound, "source not found")
+		}
+		sourceID = source.ID
+	} else {
+		// 後方互換のため、source 情報だけの caller も引き続き受け付ける。
+		if strings.TrimSpace(input.Source.Name) == "" {
+			return StartFetchJobResult{}, newServiceError(ErrValidation, "source_id or source is required")
+		}
+
+		var err error
+		sourceID, err = s.sourceRepo.EnsureSource(ctx, domain.Source{
+			Name:            input.Source.Name,
+			Type:            input.Source.Type,
+			FetchURL:        input.Source.FetchURL,
+			FetchMethod:     input.Source.FetchMethod,
+			IntervalMinutes: input.Source.IntervalMinutes,
+			DefaultCategory: input.Source.DefaultCategory,
+		})
+		if err != nil {
+			return StartFetchJobResult{}, err
+		}
 	}
 
 	jobID, err := s.jobRepo.Create(ctx, sourceID)

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,17 +21,7 @@ func Run() error {
 		return fmt.Errorf("ARTICLE_SERVICE_URL is required")
 	}
 
-	rawSources := os.Getenv("COLLECTOR_SOURCES_JSON")
-	if rawSources == "" {
-		return fmt.Errorf("COLLECTOR_SOURCES_JSON is required")
-	}
-
-	var sources []collector.SourceConfig
-	if err := json.Unmarshal([]byte(rawSources), &sources); err != nil {
-		return fmt.Errorf("parse COLLECTOR_SOURCES_JSON: %w", err)
-	}
-
-	service := collector.NewService(articleServiceURL, sources)
+	service := collector.NewService(articleServiceURL)
 	if amqpURL := os.Getenv("AMQP_URL"); amqpURL != "" {
 		publisher, err := events.NewRabbitMQPublisher(amqpURL, getenv("AMQP_EXCHANGE", "tech-feed.events"))
 		if err != nil {
