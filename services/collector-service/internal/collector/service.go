@@ -147,6 +147,7 @@ func (s *Service) loadSources(ctx context.Context) ([]SourceConfig, error) {
 
 	sources := make([]SourceConfig, 0, len(payload.Items))
 	for _, source := range payload.Items {
+		// source の真実源は article-service に寄せ、collector 側では enabled なものだけを実行対象に絞る。
 		if !source.IsEnabled {
 			continue
 		}
@@ -157,6 +158,7 @@ func (s *Service) loadSources(ctx context.Context) ([]SourceConfig, error) {
 		source.FetchMethod = strings.TrimSpace(strings.ToLower(source.FetchMethod))
 		source.DefaultCategory = strings.TrimSpace(source.DefaultCategory)
 
+		// collector はまだ RSS 専用のため、未対応 source を黙って飛ばさず同期エラーとして止める。
 		switch {
 		case source.ID < 1:
 			return nil, fmt.Errorf("source sync returned source with invalid id: %d", source.ID)
@@ -377,6 +379,7 @@ func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestAr
 	now := time.Now().UTC()
 	articles := make([]IngestArticle, 0, len(feed.Channel.Items))
 	for _, item := range feed.Channel.Items {
+		// source 側の default_category を collector で埋めておき、article-service には正規化済み記事だけを渡す。
 		article := IngestArticle{
 			Title:     strings.TrimSpace(item.Title),
 			URL:       strings.TrimSpace(item.Link),

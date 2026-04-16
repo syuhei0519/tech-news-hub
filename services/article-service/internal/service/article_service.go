@@ -404,6 +404,7 @@ func (s *ArticleService) StartFetchJob(ctx context.Context, input StartFetchJobI
 			return StartFetchJobResult{}, newServiceError(ErrValidation, "source_id or source is required")
 		}
 
+		// 古い caller は source 本体しか送れないため、移行期間は article-service 側で source 解決を引き受ける。
 		var err error
 		sourceID, err = s.sourceRepo.EnsureSource(ctx, domain.Source{
 			Name:            input.Source.Name,
