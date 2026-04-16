@@ -54,6 +54,7 @@
 - 変更に対応する docs は同じ変更内で更新する
 - PR の題名と本文は、日本語指定がない限り日本語で書く
 - PR 作成時は `.github/pull_request_template.md` を基準に本文を組み立てる
+- GitHub API / MCP で PR を作る場合、テンプレートは自動適用されない前提で `.github/pull_request_template.md` を開いて手動で埋める
 - 明示的な指示がない限り `main` へ直接 push しない
 - 重要な方針変更は `RULES.md` 側も更新対象として確認する
 
