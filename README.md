@@ -24,6 +24,11 @@ Phase 1 では以下を実装対象とします。
 - MySQL 接続
 - 記事一覧 / 詳細 / 検索
 
+現在地:
+
+- Phase 1 完了後、Phase 2 着手前
+- 検証状態の詳細は `docs/current-status.md` を参照
+
 ## Planned Repository Structure
 
 ```text

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- `AGENT.md` と `README.md` の現在地を Phase 1 完了後の状態に同期
+
 ### Added
 
 - ルール運用のためのドキュメント群

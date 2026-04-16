@@ -51,7 +51,9 @@
 
 ## Current Phase
 
-現在は Phase 1 の実装段階です。
+現在は Phase 1 完了後、Phase 2 着手前です。
+
+Phase 1 で完了した範囲:
 
 - article-service
 - collector-service の最小収集フロー
@@ -198,6 +200,20 @@ npm run build
 - `.env.example` を最新に保つ
 - `node_modules`, `dist`, `*.tsbuildinfo` はコミットしない
 - ドキュメント更新を伴う設計変更では `docs/` も更新する
+
+## Documentation Update Rules
+
+- エージェントは作業内容に応じて、必要なドキュメント更新を自分で判断して同じ変更内で実施する
+- 実装、設計、手順、現在地、優先順位、既知課題のいずれかが変わった場合、コード変更だけで完了扱いにしない
+- API 変更時は OpenAPI と API 関連 docs を確認し、必要なら更新する
+- DB 変更時は schema / init SQL / migration と DB 関連 docs を確認し、必要なら更新する
+- 手順変更時は `README.md` または `docs/runbook.md` を更新する
+- フェーズ進行、完了状態、次にやることが変わった場合は `docs/current-status.md` を更新する
+- 優先順位が変わった場合は `docs/backlog-priority.md` を更新する
+- 新しい制約や未解決事項が増えた場合は `docs/known-issues.md` を更新する
+- 重要な利用者向け変更や運用上の変更は `CHANGELOG.md` を更新する
+- エージェント向けの入口説明や恒久ルールが変わった場合は `AGENT.md` や `RULES.md` も更新する
+- ドキュメント更新が不要と判断した場合でも、完了前に更新不要の理由を確認する
 
 ## Where To Start Next
 
