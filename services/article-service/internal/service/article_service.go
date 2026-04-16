@@ -40,6 +40,8 @@ type ArticleService struct {
 type articleRepository interface {
 	List(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
 	GetByID(ctx context.Context, id int64) (*domain.Article, error)
+	UpdateReadStatus(ctx context.Context, id int64, isRead bool) (*domain.Article, error)
+	UpdateFavoriteStatus(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error)
 	BulkUpsert(ctx context.Context, sourceID int64, articles []domain.Article) (inserted int, duplicated int, err error)
 }
 
@@ -85,6 +87,44 @@ func (s *ArticleService) ListArticles(ctx context.Context, params domain.ListArt
 
 func (s *ArticleService) GetArticle(ctx context.Context, id int64) (*domain.Article, error) {
 	return s.articleRepo.GetByID(ctx, id)
+}
+
+type UpdateReadStatusInput struct {
+	IsRead bool `json:"is_read"`
+}
+
+type UpdateFavoriteStatusInput struct {
+	IsFavorite bool `json:"is_favorite"`
+}
+
+func (s *ArticleService) UpdateReadStatus(ctx context.Context, id int64, input UpdateReadStatusInput) (*domain.Article, error) {
+	if id < 1 {
+		return nil, newServiceError(ErrValidation, "article id is required")
+	}
+
+	article, err := s.articleRepo.UpdateReadStatus(ctx, id, input.IsRead)
+	if err != nil {
+		return nil, err
+	}
+	if article == nil {
+		return nil, newServiceError(ErrNotFound, "article not found")
+	}
+	return article, nil
+}
+
+func (s *ArticleService) UpdateFavoriteStatus(ctx context.Context, id int64, input UpdateFavoriteStatusInput) (*domain.Article, error) {
+	if id < 1 {
+		return nil, newServiceError(ErrValidation, "article id is required")
+	}
+
+	article, err := s.articleRepo.UpdateFavoriteStatus(ctx, id, input.IsFavorite)
+	if err != nil {
+		return nil, err
+	}
+	if article == nil {
+		return nil, newServiceError(ErrNotFound, "article not found")
+	}
+	return article, nil
 }
 
 type SourceInput struct {

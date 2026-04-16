@@ -64,13 +64,15 @@ type ListFetchJobsResult struct {
 }
 
 type ListArticlesParams struct {
-	Query    string
-	Category string
-	SourceID int64
-	Page     int
-	PageSize int
-	Sort     string
-	Order    string
+	Query      string
+	Category   string
+	SourceID   int64
+	IsRead     *bool
+	IsFavorite *bool
+	Page       int
+	PageSize   int
+	Sort       string
+	Order      string
 }
 
 type ListArticlesResult struct {

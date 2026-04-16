@@ -28,6 +28,14 @@ paths:
           schema:
             type: integer
         - in: query
+          name: is_read
+          schema:
+            type: boolean
+        - in: query
+          name: is_favorite
+          schema:
+            type: boolean
+        - in: query
           name: page
           schema:
             type: integer
@@ -40,6 +48,10 @@ paths:
       responses:
         "200":
           description: Article list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListArticlesResponse"
   /api/v1/articles/{id}:
     get:
       summary: Get article detail
@@ -52,6 +64,64 @@ paths:
       responses:
         "200":
           description: Article detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Article not found
+  /api/v1/articles/{id}/read-status:
+    patch:
+      summary: Update article read status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadStatusInput"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          description: Validation error
+        "404":
+          description: Article not found
+  /api/v1/articles/{id}/favorite-status:
+    patch:
+      summary: Update article favorite status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteStatusInput"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          description: Validation error
+        "404":
+          description: Article not found
   /api/v1/sources:
     get:
       summary: List sources
@@ -186,6 +256,94 @@ paths:
           description: Validation error
 components:
   schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        source_id:
+          type: integer
+        source_name:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        fetched_at:
+          type: string
+          format: date-time
+        excerpt:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        is_read:
+          type: boolean
+        is_favorite:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - url
+        - source_id
+        - source_name
+        - fetched_at
+        - excerpt
+        - category
+        - tags
+        - is_read
+        - is_favorite
+        - created_at
+        - updated_at
+    ListArticlesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - page_size
+        - total_pages
+    ReadStatusInput:
+      type: object
+      properties:
+        is_read:
+          type: boolean
+      required:
+        - is_read
+    FavoriteStatusInput:
+      type: object
+      properties:
+        is_favorite:
+          type: boolean
+      required:
+        - is_favorite
     Source:
       type: object
       properties:

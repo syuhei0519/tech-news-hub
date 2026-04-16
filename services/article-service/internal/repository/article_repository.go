@@ -52,6 +52,14 @@ func (r *ArticleRepository) List(ctx context.Context, params domain.ListArticles
 		where = append(where, "a.source_id = ?")
 		args = append(args, params.SourceID)
 	}
+	if params.IsRead != nil {
+		where = append(where, "a.is_read = ?")
+		args = append(args, *params.IsRead)
+	}
+	if params.IsFavorite != nil {
+		where = append(where, "a.is_favorite = ?")
+		args = append(args, *params.IsFavorite)
+	}
 
 	whereClause := strings.Join(where, " AND ")
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM articles a WHERE %s", whereClause)
@@ -119,6 +127,40 @@ func (r *ArticleRepository) GetByID(ctx context.Context, id int64) (*domain.Arti
 		return nil, err
 	}
 	return &article, nil
+}
+
+func (r *ArticleRepository) UpdateReadStatus(ctx context.Context, id int64, isRead bool) (*domain.Article, error) {
+	result, err := r.db.ExecContext(ctx, "UPDATE articles SET is_read = ? WHERE id = ?", isRead, id)
+	if err != nil {
+		return nil, fmt.Errorf("update read status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("read rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, nil
+	}
+
+	return r.GetByID(ctx, id)
+}
+
+func (r *ArticleRepository) UpdateFavoriteStatus(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error) {
+	result, err := r.db.ExecContext(ctx, "UPDATE articles SET is_favorite = ? WHERE id = ?", isFavorite, id)
+	if err != nil {
+		return nil, fmt.Errorf("update favorite status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("favorite rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, nil
+	}
+
+	return r.GetByID(ctx, id)
 }
 
 func (r *ArticleRepository) BulkUpsert(ctx context.Context, sourceID int64, articles []domain.Article) (inserted int, duplicated int, err error) {

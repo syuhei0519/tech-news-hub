@@ -9,20 +9,28 @@ import { useSearchStore } from "../store/searchStore";
 const schema = z.object({
   q: z.string().max(100).default(""),
   category: z.string().max(50).default(""),
+  isReadOnly: z.boolean().default(false),
+  isFavoriteOnly: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 export function ArticleListPage() {
-  const { q, category, setFilters } = useSearchStore();
+  const { q, category, isReadOnly, isFavoriteOnly, setFilters } = useSearchStore();
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { q, category },
+    defaultValues: { q, category, isReadOnly, isFavoriteOnly },
   });
 
   const articlesQuery = useQuery({
-    queryKey: ["articles", q, category],
-    queryFn: () => fetchArticles({ q, category }),
+    queryKey: ["articles", q, category, isReadOnly, isFavoriteOnly],
+    queryFn: () =>
+      fetchArticles({
+        q,
+        category,
+        is_read: isReadOnly ? false : undefined,
+        is_favorite: isFavoriteOnly ? true : undefined,
+      }),
   });
 
   const onSubmit = form.handleSubmit((values) => {
@@ -40,7 +48,7 @@ export function ArticleListPage() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-[2fr,1fr,auto]">
+        <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr,1fr,auto,auto,auto]">
           <input
             {...form.register("q")}
             placeholder="タイトル・概要で検索"
@@ -57,6 +65,14 @@ export function ArticleListPage() {
           >
             Search
           </button>
+          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-200">
+            <input type="checkbox" {...form.register("isReadOnly")} className="size-4 rounded border-white/20" />
+            未読のみ
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-200">
+            <input type="checkbox" {...form.register("isFavoriteOnly")} className="size-4 rounded border-white/20" />
+            お気に入りのみ
+          </label>
         </form>
       </section>
 
@@ -84,6 +100,18 @@ export function ArticleListPage() {
                 <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-200">{article.category}</span>
                 <span>{article.source_name}</span>
                 <span>{formatDate(article.published_at ?? article.fetched_at)}</span>
+                <span
+                  className={
+                    article.is_read
+                      ? "rounded-full bg-slate-800 px-3 py-1 text-slate-300"
+                      : "rounded-full bg-emerald-400/10 px-3 py-1 text-emerald-200"
+                  }
+                >
+                  {article.is_read ? "既読" : "未読"}
+                </span>
+                {article.is_favorite ? (
+                  <span className="rounded-full bg-amber-400/10 px-3 py-1 text-amber-200">お気に入り</span>
+                ) : null}
               </div>
               <h2 className="mb-2 text-xl font-medium text-white group-hover:text-cyan-200">{article.title}</h2>
               <p className="line-clamp-3 text-sm leading-6 text-slate-300">{article.excerpt || "概要は未取得です。"}</p>
