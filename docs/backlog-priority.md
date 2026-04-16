@@ -8,19 +8,18 @@
 
 ### Now
 
-1. collector-service の動的ソース同期
-2. `#7` kind デプロイ、Helm Chart、Argo CD の整備
-3. `#6` Proxmox クラスタ移行、永続化、監視拡張
+1. `#7` kind デプロイ、Helm Chart、Argo CD の整備
+2. `#6` Proxmox クラスタ移行、永続化、監視拡張
 
 ### Next
 
-4. 認証導入
-5. 監視基盤の詳細設計
+3. 認証導入
+4. 監視基盤の詳細設計
+5. collector の収集戦略拡張
 
 ### Later
 
 6. バックアップ / リストア運用の整理
-7. collector の収集戦略拡張
 
 ## Priority Rules
 

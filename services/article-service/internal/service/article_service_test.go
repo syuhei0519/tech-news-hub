@@ -71,6 +71,7 @@ func (r *stubArticleRepo) BulkUpsert(ctx context.Context, sourceID int64, articl
 }
 
 type stubSourceRepo struct {
+	getByIDFunc           func(ctx context.Context, id int64) (*domain.Source, error)
 	ensureSourceFunc      func(ctx context.Context, source domain.Source) (int64, error)
 	updateFetchStatusFunc func(ctx context.Context, id int64, status string, errMsg *string) error
 }
@@ -79,7 +80,10 @@ func (r *stubSourceRepo) List(context.Context) ([]domain.Source, error) {
 	return nil, nil
 }
 
-func (r *stubSourceRepo) GetByID(context.Context, int64) (*domain.Source, error) {
+func (r *stubSourceRepo) GetByID(ctx context.Context, id int64) (*domain.Source, error) {
+	if r.getByIDFunc != nil {
+		return r.getByIDFunc(ctx, id)
+	}
 	return nil, nil
 }
 
@@ -165,6 +169,48 @@ func TestStartFetchJobEnsuresSourceAndCreatesJob(t *testing.T) {
 			DefaultCategory: "k8s",
 		},
 	})
+	if err != nil {
+		t.Fatalf("StartFetchJob returned error: %v", err)
+	}
+	if result.SourceID != 12 || result.JobID != 34 {
+		t.Fatalf("unexpected result: %+v", result)
+	}
+}
+
+func TestStartFetchJobUsesExistingSourceID(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{},
+		sourceRepo: &stubSourceRepo{
+			getByIDFunc: func(_ context.Context, id int64) (*domain.Source, error) {
+				if id != 12 {
+					t.Fatalf("unexpected source id lookup: %d", id)
+				}
+				return &domain.Source{ID: 12, Name: "Kubernetes"}, nil
+			},
+			ensureSourceFunc: func(context.Context, domain.Source) (int64, error) {
+				t.Fatal("EnsureSource should not be called when source_id is provided")
+				return 0, nil
+			},
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc: func(_ context.Context, sourceID int64) (int64, error) {
+				if sourceID != 12 {
+					t.Fatalf("unexpected source id: %d", sourceID)
+				}
+				return 34, nil
+			},
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	result, err := service.StartFetchJob(context.Background(), StartFetchJobInput{SourceID: 12})
 	if err != nil {
 		t.Fatalf("StartFetchJob returned error: %v", err)
 	}

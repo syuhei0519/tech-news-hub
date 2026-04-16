@@ -18,10 +18,14 @@ import (
 )
 
 type SourceConfig struct {
+	ID              int64  `json:"id"`
 	Name            string `json:"name"`
 	Type            string `json:"type"`
-	URL             string `json:"url"`
+	FetchURL        string `json:"fetch_url"`
+	FetchMethod     string `json:"fetch_method"`
+	IntervalMinutes int    `json:"interval_minutes"`
 	DefaultCategory string `json:"default_category"`
+	IsEnabled       bool   `json:"is_enabled"`
 }
 
 type rssFeed struct {
@@ -78,15 +82,13 @@ type RunResult struct {
 type Service struct {
 	client            *http.Client
 	articleServiceURL string
-	sources           []SourceConfig
 	publisher         events.EventPublisher
 }
 
-func NewService(articleServiceURL string, sources []SourceConfig) *Service {
+func NewService(articleServiceURL string) *Service {
 	return &Service{
 		client:            &http.Client{Timeout: 20 * time.Second},
 		articleServiceURL: articleServiceURL,
-		sources:           sources,
 		publisher:         events.NopPublisher{},
 	}
 }
@@ -100,8 +102,13 @@ func (s *Service) SetEventPublisher(publisher events.EventPublisher) {
 }
 
 func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
-	results := make([]RunResult, 0, len(s.sources))
-	for _, source := range s.sources {
+	sources, err := s.loadSources(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]RunResult, 0, len(sources))
+	for _, source := range sources {
 		// source ごとに順に処理し、どの source で止まったかを呼び出し側から判断しやすくする。
 		result, err := s.collectSource(ctx, source)
 		if err != nil {
@@ -110,6 +117,69 @@ func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
 		results = append(results, result)
 	}
 	return results, nil
+}
+
+type listSourcesResponse struct {
+	Items []SourceConfig `json:"items"`
+}
+
+func (s *Service) loadSources(ctx context.Context) ([]SourceConfig, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.articleServiceURL+"/api/v1/sources", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create source sync request: %w", err)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("source sync request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		raw, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("source sync failed: status=%d body=%s", resp.StatusCode, string(raw))
+	}
+
+	var payload listSourcesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, fmt.Errorf("decode source sync response: %w", err)
+	}
+
+	sources := make([]SourceConfig, 0, len(payload.Items))
+	for _, source := range payload.Items {
+		// source の真実源は article-service に寄せ、collector 側では enabled なものだけを実行対象に絞る。
+		if !source.IsEnabled {
+			continue
+		}
+
+		source.Name = strings.TrimSpace(source.Name)
+		source.Type = strings.TrimSpace(strings.ToLower(source.Type))
+		source.FetchURL = strings.TrimSpace(source.FetchURL)
+		source.FetchMethod = strings.TrimSpace(strings.ToLower(source.FetchMethod))
+		source.DefaultCategory = strings.TrimSpace(source.DefaultCategory)
+
+		// collector はまだ RSS 専用のため、未対応 source を黙って飛ばさず同期エラーとして止める。
+		switch {
+		case source.ID < 1:
+			return nil, fmt.Errorf("source sync returned source with invalid id: %d", source.ID)
+		case source.Name == "":
+			return nil, fmt.Errorf("source sync returned source with empty name")
+		case source.Type != "rss":
+			return nil, fmt.Errorf("source %q has unsupported type: %s", source.Name, source.Type)
+		case source.FetchURL == "":
+			return nil, fmt.Errorf("source %q has empty fetch_url", source.Name)
+		case source.FetchMethod != "rss":
+			return nil, fmt.Errorf("source %q has unsupported fetch_method: %s", source.Name, source.FetchMethod)
+		case source.IntervalMinutes < 1:
+			return nil, fmt.Errorf("source %q has invalid interval_minutes: %d", source.Name, source.IntervalMinutes)
+		case source.DefaultCategory == "":
+			return nil, fmt.Errorf("source %q has empty default_category", source.Name)
+		}
+
+		sources = append(sources, source)
+	}
+
+	return sources, nil
 }
 
 func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunResult, error) {
@@ -127,14 +197,7 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 	payload := IngestPayload{
 		JobID:    started.JobID,
 		SourceID: started.SourceID,
-		Source: IngestSource{
-			Name:            source.Name,
-			Type:            source.Type,
-			FetchURL:        source.URL,
-			FetchMethod:     "rss",
-			IntervalMinutes: 60,
-			DefaultCategory: source.DefaultCategory,
-		},
+		Source:   toIngestSource(source),
 		Articles: items,
 	}
 
@@ -191,7 +254,8 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 }
 
 type startFetchJobPayload struct {
-	Source IngestSource `json:"source"`
+	SourceID int64        `json:"source_id,omitempty"`
+	Source   IngestSource `json:"source"`
 }
 
 type startFetchJobResult struct {
@@ -200,16 +264,10 @@ type startFetchJobResult struct {
 }
 
 func (s *Service) startFetchJob(ctx context.Context, source SourceConfig) (startFetchJobResult, error) {
-	// source 情報は start API にも渡し、article-service 側で source 解決と job 作成を一貫して行う。
+	// source 一覧 API で解決済みの ID を優先しつつ、source 情報も渡して downstream の shape を揃える。
 	payload := startFetchJobPayload{
-		Source: IngestSource{
-			Name:            source.Name,
-			Type:            source.Type,
-			FetchURL:        source.URL,
-			FetchMethod:     "rss",
-			IntervalMinutes: 60,
-			DefaultCategory: source.DefaultCategory,
-		},
+		SourceID: source.ID,
+		Source:   toIngestSource(source),
 	}
 
 	body, err := json.Marshal(payload)
@@ -297,7 +355,7 @@ func (s *Service) finishFetchJob(ctx context.Context, jobID int64, payload finis
 }
 
 func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestArticle, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.FetchURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create rss request: %w", err)
 	}
@@ -321,6 +379,7 @@ func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestAr
 	now := time.Now().UTC()
 	articles := make([]IngestArticle, 0, len(feed.Channel.Items))
 	for _, item := range feed.Channel.Items {
+		// source 側の default_category を collector で埋めておき、article-service には正規化済み記事だけを渡す。
 		article := IngestArticle{
 			Title:     strings.TrimSpace(item.Title),
 			URL:       strings.TrimSpace(item.Link),
@@ -341,6 +400,17 @@ func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestAr
 	}
 
 	return articles, nil
+}
+
+func toIngestSource(source SourceConfig) IngestSource {
+	return IngestSource{
+		Name:            source.Name,
+		Type:            source.Type,
+		FetchURL:        source.FetchURL,
+		FetchMethod:     source.FetchMethod,
+		IntervalMinutes: source.IntervalMinutes,
+		DefaultCategory: source.DefaultCategory,
+	}
 }
 
 func parsePubDate(raw string) (time.Time, error) {

@@ -6,14 +6,6 @@
 
 ## Current Known Issues
 
-### Collector Source Configuration Is Still Static
-
-- 現在の collector-service は環境変数ベースのソース定義を使用している
-- ソース管理 API / UI はあるが、collector-service とはまだ接続されていない
-- アプリ上の source 作成・編集・有効無効切り替えは収集対象へ自動反映されない
-- 取得ジョブ履歴と失敗状況の可視化はできるが、収集対象自体の同期は未実装
-- Phase 2 の後続対応で collector 側連携が必要
-
 ### Authentication Is Not Implemented
 
 - api-gateway に JWT の導入ポイントはあるが、実装は未着手

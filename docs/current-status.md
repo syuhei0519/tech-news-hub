@@ -25,6 +25,7 @@
 - `api-gateway` の最小プロキシ
 - `api-gateway` 経由のソース管理 API 公開
 - `collector-service` の最小 RSS 収集フロー
+- `collector-service` の source 管理 API 連携と実行時同期
 - `frontend` の記事一覧 / 詳細 / 検索画面
 - `frontend` の記事検索結果 CSV ダウンロード
 - `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
@@ -49,10 +50,10 @@
 
 ## Highest Priority Next
 
-1. collector-service の動的ソース同期
-2. kind / Helm / Argo CD の整備
-3. Proxmox クラスタ移行、永続化、監視拡張
-4. 認証導入の設計整理
+1. kind / Helm / Argo CD の整備
+2. Proxmox クラスタ移行、永続化、監視拡張
+3. 認証導入の設計整理
+4. collector の収集戦略拡張
 
 ## Open GitHub Issues
 
@@ -61,7 +62,6 @@
 
 ## Known Gaps
 
-- ソース管理 UI/API とジョブ履歴 UI/API は実装済みだが、collector-service はまだ静的設定依存
 - 認証は未実装
 - kind / Helm / Argo CD は未着手
 
