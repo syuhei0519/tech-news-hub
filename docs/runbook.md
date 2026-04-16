@@ -24,10 +24,30 @@ docker compose config -q
 make up
 ```
 
+### Start With Hot Reload
+
+```bash
+make dev-up
+```
+
+補足:
+
+- frontend は Vite HMR で即時反映する
+- Go services は `air` で build / restart される
+- 初回起動では dev image build と依存取得に時間がかかる
+- dev 用 compose は `docker-compose.yml` に `docker-compose.dev.yml` を重ねて使う
+- frontend 依存が変わった場合も `package-lock.json` を見て `npm ci` を再実行する
+
 ### Stop
 
 ```bash
 make down
+```
+
+### Stop Hot Reload Stack
+
+```bash
+make dev-down
 ```
 
 補足:
@@ -39,6 +59,12 @@ make down
 
 ```bash
 make logs
+```
+
+### Dev Logs
+
+```bash
+make dev-logs
 ```
 
 ## Basic Verification
@@ -64,6 +90,12 @@ npm run build
 
 ```bash
 docker compose config -q
+```
+
+### Dev Compose Config
+
+```bash
+make dev-config
 ```
 
 ### Full Verify

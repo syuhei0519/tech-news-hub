@@ -1,21 +1,39 @@
 -include .env
 
-.PHONY: up down reset logs ps build test verify
+COMPOSE := docker compose
+DEV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
+
+.PHONY: up down reset logs ps dev-up dev-down dev-logs dev-ps dev-config build test verify
 
 up:
-	docker compose up --build
+	$(COMPOSE) up --build
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 reset:
-	docker compose down -v
+	$(COMPOSE) down -v
 
 logs:
-	docker compose logs -f
+	$(COMPOSE) logs -f
 
 ps:
-	docker compose ps
+	$(COMPOSE) ps
+
+dev-up:
+	$(DEV_COMPOSE) up --build
+
+dev-down:
+	$(DEV_COMPOSE) down
+
+dev-logs:
+	$(DEV_COMPOSE) logs -f
+
+dev-ps:
+	$(DEV_COMPOSE) ps
+
+dev-config:
+	$(DEV_COMPOSE) config -q
 
 build:
 	cd frontend && npm run build
@@ -27,4 +45,4 @@ test:
 	cd services/notification-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
 
 verify: test build
-	docker compose config -q
+	$(COMPOSE) config -q
