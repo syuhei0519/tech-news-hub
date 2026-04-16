@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -26,36 +27,42 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		v1.GET("/articles", func(c *gin.Context) {
-			sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+			params, err := parseArticleFilterParams(c)
+			if err != nil {
+				return
+			}
 			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
 			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
-			// 未指定と false 指定を区別して repository に渡し、独立フィルタの組み合わせを保つ。
-			isRead, err := parseOptionalBoolQuery(c, "is_read")
-			if err != nil {
-				return
-			}
-			isFavorite, err := parseOptionalBoolQuery(c, "is_favorite")
-			if err != nil {
-				return
-			}
 
 			result, err := articleService.ListArticles(c.Request.Context(), domain.ListArticlesParams{
-				Query:      c.Query("q"),
-				Category:   c.Query("category"),
-				SourceID:   sourceID,
-				IsRead:     isRead,
-				IsFavorite: isFavorite,
-				Page:       page,
-				PageSize:   pageSize,
-				Sort:       c.Query("sort"),
-				Order:      c.Query("order"),
+				ArticleFilterParams: params,
+				Page:                page,
+				PageSize:            pageSize,
 			})
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				writeServiceError(c, err)
 				return
 			}
 
 			c.JSON(http.StatusOK, result)
+		})
+
+		v1.GET("/articles/export.csv", func(c *gin.Context) {
+			params, err := parseArticleFilterParams(c)
+			if err != nil {
+				return
+			}
+
+			data, err := articleService.ExportArticlesCSV(c.Request.Context(), domain.ExportArticlesParams{
+				ArticleFilterParams: params,
+				Limit:               1000,
+			})
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 		})
 
 		v1.GET("/articles/:id", func(c *gin.Context) {
@@ -285,6 +292,52 @@ func parseOptionalBoolQuery(c *gin.Context, key string) (*bool, error) {
 	}
 
 	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + key})
+		return nil, err
+	}
+	return &value, nil
+}
+
+func parseArticleFilterParams(c *gin.Context) (domain.ArticleFilterParams, error) {
+	sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+	isRead, err := parseOptionalBoolQuery(c, "is_read")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	isFavorite, err := parseOptionalBoolQuery(c, "is_favorite")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	publishedFrom, err := parseOptionalTimeQuery(c, "from")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	publishedTo, err := parseOptionalTimeQuery(c, "to")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+
+	return domain.ArticleFilterParams{
+		Query:         c.Query("q"),
+		Category:      c.Query("category"),
+		SourceID:      sourceID,
+		IsRead:        isRead,
+		IsFavorite:    isFavorite,
+		PublishedFrom: publishedFrom,
+		PublishedTo:   publishedTo,
+		Sort:          c.Query("sort"),
+		Order:         c.Query("order"),
+	}, nil
+}
+
+func parseOptionalTimeQuery(c *gin.Context, key string) (*time.Time, error) {
+	raw := c.Query(key)
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := time.Parse(time.RFC3339, raw)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + key})
 		return nil, err

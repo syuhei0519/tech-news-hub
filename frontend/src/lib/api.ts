@@ -76,15 +76,35 @@ export type ListFetchJobsResponse = {
   total_pages: number;
 };
 
-export async function fetchArticles(params: {
+export type ArticleQueryParams = {
   q?: string;
   category?: string;
+  source_id?: number;
   is_read?: boolean;
   is_favorite?: boolean;
+  from?: string;
+  to?: string;
+  sort?: string;
+  order?: string;
   page?: number;
-}) {
-  const response = await api.get<ListArticlesResponse>("/api/v1/articles", { params });
+};
+
+export async function fetchArticles(params: ArticleQueryParams) {
+  const response = await api.get<ListArticlesResponse>("/api/v1/articles", { params: buildArticleQueryParams(params) });
   return response.data;
+}
+
+export function buildArticleExportUrl(params: ArticleQueryParams) {
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(buildArticleQueryParams(params))) {
+    if (value === undefined) {
+      continue;
+    }
+    searchParams.set(key, String(value));
+  }
+  const query = searchParams.toString();
+  const baseURL = typeof api.defaults.baseURL === "string" ? api.defaults.baseURL.replace(/\/$/, "") : "";
+  return query ? `${baseURL}/api/v1/exports/articles.csv?${query}` : `${baseURL}/api/v1/exports/articles.csv`;
 }
 
 export async function fetchArticle(id: string) {
@@ -134,4 +154,26 @@ export async function updateSource(id: number, input: SourceInput) {
 
 export async function deleteSource(id: number) {
   await api.delete(`/api/v1/sources/${id}`);
+}
+
+function buildArticleQueryParams(params: ArticleQueryParams) {
+  return {
+    q: params.q || undefined,
+    category: params.category || undefined,
+    source_id: params.source_id,
+    is_read: params.is_read,
+    is_favorite: params.is_favorite,
+    from: normalizeDateTimeInput(params.from),
+    to: normalizeDateTimeInput(params.to),
+    sort: params.sort || undefined,
+    order: params.order || undefined,
+    page: params.page,
+  };
+}
+
+function normalizeDateTimeInput(value?: string) {
+  if (!value) {
+    return undefined;
+  }
+  return new Date(value).toISOString();
 }

@@ -63,16 +63,27 @@ type ListFetchJobsResult struct {
 	TotalPages int        `json:"total_pages"`
 }
 
+type ArticleFilterParams struct {
+	Query         string
+	Category      string
+	SourceID      int64
+	IsRead        *bool
+	IsFavorite    *bool
+	PublishedFrom *time.Time
+	PublishedTo   *time.Time
+	Sort          string
+	Order         string
+}
+
 type ListArticlesParams struct {
-	Query      string
-	Category   string
-	SourceID   int64
-	IsRead     *bool
-	IsFavorite *bool
-	Page       int
-	PageSize   int
-	Sort       string
-	Order      string
+	ArticleFilterParams
+	Page     int
+	PageSize int
+}
+
+type ExportArticlesParams struct {
+	ArticleFilterParams
+	Limit int
 }
 
 type ListArticlesResult struct {

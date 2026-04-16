@@ -1,7 +1,9 @@
 package service
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/url"
@@ -39,6 +41,7 @@ type ArticleService struct {
 
 type articleRepository interface {
 	List(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
+	Export(ctx context.Context, params domain.ExportArticlesParams) ([]domain.Article, error)
 	GetByID(ctx context.Context, id int64) (*domain.Article, error)
 	UpdateReadStatus(ctx context.Context, id int64, isRead bool) (*domain.Article, error)
 	UpdateFavoriteStatus(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error)
@@ -82,7 +85,60 @@ func (s *ArticleService) ListFetchJobs(ctx context.Context, params domain.ListFe
 }
 
 func (s *ArticleService) ListArticles(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error) {
+	if err := validateArticleFilters(params.ArticleFilterParams); err != nil {
+		return domain.ListArticlesResult{}, err
+	}
 	return s.articleRepo.List(ctx, params)
+}
+
+func (s *ArticleService) ExportArticlesCSV(ctx context.Context, params domain.ExportArticlesParams) ([]byte, error) {
+	if err := validateArticleFilters(params.ArticleFilterParams); err != nil {
+		return nil, err
+	}
+	if params.Limit < 1 {
+		params.Limit = 1000
+	}
+
+	articles, err := s.articleRepo.Export(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	if len(articles) > params.Limit {
+		return nil, newServiceError(ErrValidation, fmt.Sprintf("export result exceeds limit %d", params.Limit))
+	}
+
+	var buf bytes.Buffer
+	buf.Write([]byte{0xEF, 0xBB, 0xBF})
+	writer := csv.NewWriter(&buf)
+	if err := writer.Write([]string{
+		"title", "url", "source_name", "category", "published_at",
+		"fetched_at", "is_read", "is_favorite", "excerpt", "tags",
+	}); err != nil {
+		return nil, fmt.Errorf("write csv header: %w", err)
+	}
+
+	for _, article := range articles {
+		record := []string{
+			sanitizeCSVCell(article.Title),
+			sanitizeCSVCell(article.URL),
+			sanitizeCSVCell(article.SourceName),
+			sanitizeCSVCell(article.Category),
+			formatCSVTime(article.PublishedAt),
+			formatCSVTime(&article.FetchedAt),
+			formatCSVBool(article.IsRead),
+			formatCSVBool(article.IsFavorite),
+			sanitizeCSVCell(article.Excerpt),
+			sanitizeCSVCell(strings.Join(article.Tags, ";")),
+		}
+		if err := writer.Write(record); err != nil {
+			return nil, fmt.Errorf("write csv record: %w", err)
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("flush csv: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 func (s *ArticleService) GetArticle(ctx context.Context, id int64) (*domain.Article, error) {
@@ -443,4 +499,37 @@ func normalizeOptionalString(value *string) *string {
 		return nil
 	}
 	return &trimmed
+}
+
+func validateArticleFilters(params domain.ArticleFilterParams) error {
+	if params.PublishedFrom != nil && params.PublishedTo != nil && params.PublishedFrom.After(*params.PublishedTo) {
+		return newServiceError(ErrValidation, "from must be less than or equal to to")
+	}
+	return nil
+}
+
+func formatCSVTime(value *time.Time) string {
+	if value == nil {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
+}
+
+func formatCSVBool(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
+}
+
+func sanitizeCSVCell(value string) string {
+	if value == "" {
+		return ""
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r', '\n':
+		return "'" + value
+	default:
+		return value
+	}
 }
