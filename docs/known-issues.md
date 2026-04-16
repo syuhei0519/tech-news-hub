@@ -9,8 +9,10 @@
 ### Collector Source Configuration Is Still Static
 
 - 現在の collector-service は環境変数ベースのソース定義を使用している
-- アプリ上のソース管理とはまだ接続されていない
-- Phase 2 の `#1` で改善予定
+- ソース管理 API / UI はあるが、collector-service とはまだ接続されていない
+- アプリ上の source 作成・編集・有効無効切り替えは収集対象へ自動反映されない
+- 取得ジョブ履歴と失敗状況の可視化はできるが、収集対象自体の同期は未実装
+- Phase 2 の後続対応で collector 側連携が必要
 
 ### Authentication Is Not Implemented
 

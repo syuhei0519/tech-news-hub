@@ -2,8 +2,10 @@ package httpapi
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,25 +27,42 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 	v1 := router.Group("/api/v1")
 	{
 		v1.GET("/articles", func(c *gin.Context) {
-			sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+			params, err := parseArticleFilterParams(c)
+			if err != nil {
+				return
+			}
 			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
 			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
 
 			result, err := articleService.ListArticles(c.Request.Context(), domain.ListArticlesParams{
-				Query:    c.Query("q"),
-				Category: c.Query("category"),
-				SourceID: sourceID,
-				Page:     page,
-				PageSize: pageSize,
-				Sort:     c.Query("sort"),
-				Order:    c.Query("order"),
+				ArticleFilterParams: params,
+				Page:                page,
+				PageSize:            pageSize,
 			})
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				writeServiceError(c, err)
 				return
 			}
 
 			c.JSON(http.StatusOK, result)
+		})
+
+		v1.GET("/articles/export.csv", func(c *gin.Context) {
+			params, err := parseArticleFilterParams(c)
+			if err != nil {
+				return
+			}
+
+			data, err := articleService.ExportArticlesCSV(c.Request.Context(), domain.ExportArticlesParams{
+				ArticleFilterParams: params,
+				Limit:               1000,
+			})
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.Data(http.StatusOK, "text/csv; charset=utf-8", data)
 		})
 
 		v1.GET("/articles/:id", func(c *gin.Context) {
@@ -65,10 +84,179 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 
 			c.JSON(http.StatusOK, article)
 		})
+
+		v1.PATCH("/articles/:id/read-status", func(c *gin.Context) {
+			id, err := parseIDParam(c, "article id")
+			if err != nil {
+				return
+			}
+
+			var req service.UpdateReadStatusInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// 状態更新の整合性判断は service に寄せ、handler は入出力変換だけに留める。
+			article, err := articleService.UpdateReadStatus(c.Request.Context(), id, req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, article)
+		})
+
+		v1.PATCH("/articles/:id/favorite-status", func(c *gin.Context) {
+			id, err := parseIDParam(c, "article id")
+			if err != nil {
+				return
+			}
+
+			var req service.UpdateFavoriteStatusInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// お気に入り更新も read-status と同じ責務分担に揃え、公開 API の扱いを単純化する。
+			article, err := articleService.UpdateFavoriteStatus(c.Request.Context(), id, req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, article)
+		})
+
+		v1.GET("/sources", func(c *gin.Context) {
+			sources, err := articleService.ListSources(c.Request.Context())
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"items": sources})
+		})
+
+		v1.GET("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			source, err := articleService.GetSource(c.Request.Context(), id)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, source)
+		})
+
+		v1.GET("/fetch-jobs", func(c *gin.Context) {
+			sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
+			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
+
+			// source 詳細画面の一覧要件をそのまま受けるだけに留め、絞り込み仕様は service 側で統一する。
+			result, err := articleService.ListFetchJobs(c.Request.Context(), domain.ListFetchJobsParams{
+				SourceID: sourceID,
+				Status:   c.Query("status"),
+				Page:     page,
+				PageSize: pageSize,
+			})
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, result)
+		})
+
+		v1.POST("/sources", func(c *gin.Context) {
+			var req service.SourceInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			source, err := articleService.CreateSource(c.Request.Context(), req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusCreated, source)
+		})
+
+		v1.PATCH("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			var req service.SourceInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			source, err := articleService.UpdateSource(c.Request.Context(), id, req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, source)
+		})
+
+		v1.DELETE("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			if err := articleService.DeleteSource(c.Request.Context(), id); err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.Status(http.StatusNoContent)
+		})
 	}
 
 	internal := router.Group("/internal")
 	{
+		internal.POST("/fetch-jobs/start", func(c *gin.Context) {
+			var req service.StartFetchJobInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			result, err := articleService.StartFetchJob(c.Request.Context(), req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusAccepted, result)
+		})
+
+		internal.POST("/fetch-jobs/:id/finish", func(c *gin.Context) {
+			jobID, err := parseIDParam(c, "fetch job id")
+			if err != nil {
+				return
+			}
+
+			var req service.FinishFetchJobInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err := articleService.FinishFetchJob(c.Request.Context(), jobID, req); err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.Status(http.StatusNoContent)
+		})
+
 		internal.POST("/ingest", func(c *gin.Context) {
 			var req service.IngestRequest
 			if err := c.ShouldBindJSON(&req); err != nil {
@@ -76,6 +264,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 				return
 			}
 
+			// ingest 単体の失敗は collector が finish API で閉じるため、ここでは記事登録結果だけ返す。
 			result, err := articleService.Ingest(c.Request.Context(), req)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -94,4 +283,86 @@ func defaultString(value string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func parseOptionalBoolQuery(c *gin.Context, key string) (*bool, error) {
+	raw := c.Query(key)
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + key})
+		return nil, err
+	}
+	return &value, nil
+}
+
+func parseArticleFilterParams(c *gin.Context) (domain.ArticleFilterParams, error) {
+	sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
+	isRead, err := parseOptionalBoolQuery(c, "is_read")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	isFavorite, err := parseOptionalBoolQuery(c, "is_favorite")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	publishedFrom, err := parseOptionalTimeQuery(c, "from")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+	publishedTo, err := parseOptionalTimeQuery(c, "to")
+	if err != nil {
+		return domain.ArticleFilterParams{}, err
+	}
+
+	return domain.ArticleFilterParams{
+		Query:         c.Query("q"),
+		Category:      c.Query("category"),
+		SourceID:      sourceID,
+		IsRead:        isRead,
+		IsFavorite:    isFavorite,
+		PublishedFrom: publishedFrom,
+		PublishedTo:   publishedTo,
+		Sort:          c.Query("sort"),
+		Order:         c.Query("order"),
+	}, nil
+}
+
+func parseOptionalTimeQuery(c *gin.Context, key string) (*time.Time, error) {
+	raw := c.Query(key)
+	if raw == "" {
+		return nil, nil
+	}
+
+	value, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + key})
+		return nil, err
+	}
+	return &value, nil
+}
+
+func parseIDParam(c *gin.Context, label string) (int64, error) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + label})
+		return 0, err
+	}
+	return id, nil
+}
+
+func writeServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrValidation):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case errors.Is(err, service.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, service.ErrConflict):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }

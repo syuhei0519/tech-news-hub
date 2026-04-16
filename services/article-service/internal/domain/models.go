@@ -48,14 +48,42 @@ type FetchJob struct {
 	ErrorMessage    *string    `json:"error_message"`
 }
 
-type ListArticlesParams struct {
-	Query    string
-	Category string
+type ListFetchJobsParams struct {
 	SourceID int64
+	Status   string
 	Page     int
 	PageSize int
-	Sort     string
-	Order    string
+}
+
+type ListFetchJobsResult struct {
+	Items      []FetchJob `json:"items"`
+	Total      int        `json:"total"`
+	Page       int        `json:"page"`
+	PageSize   int        `json:"page_size"`
+	TotalPages int        `json:"total_pages"`
+}
+
+type ArticleFilterParams struct {
+	Query         string
+	Category      string
+	SourceID      int64
+	IsRead        *bool
+	IsFavorite    *bool
+	PublishedFrom *time.Time
+	PublishedTo   *time.Time
+	Sort          string
+	Order         string
+}
+
+type ListArticlesParams struct {
+	ArticleFilterParams
+	Page     int
+	PageSize int
+}
+
+type ExportArticlesParams struct {
+	ArticleFilterParams
+	Limit int
 }
 
 type ListArticlesResult struct {

@@ -24,6 +24,11 @@ Phase 1 では以下を実装対象とします。
 - MySQL 接続
 - 記事一覧 / 詳細 / 検索
 
+現在地:
+
+- Phase 1 完了後、Phase 2 着手前
+- 検証状態の詳細は `docs/current-status.md` を参照
+
 ## Planned Repository Structure
 
 ```text
@@ -66,3 +71,8 @@ Phase 1 では以下を実装対象とします。
 - `make build`: frontend build
 - `make test`: backend test
 - `make verify`: test + build + compose config check
+
+補足:
+
+- 通常のコード変更では CI も `make verify` 相当を実行します
+- docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します

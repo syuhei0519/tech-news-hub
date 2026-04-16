@@ -5,6 +5,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./ui/AppLayout";
 import { ArticleDetailPage } from "./ui/ArticleDetailPage";
 import { ArticleListPage } from "./ui/ArticleListPage";
+import { SourceDetailPage } from "./ui/SourceDetailPage";
+import { SourceManagementPage } from "./ui/SourceManagementPage";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -14,6 +16,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <ArticleListPage /> },
       { path: "articles/:id", element: <ArticleDetailPage /> },
+      { path: "sources", element: <SourceManagementPage /> },
+      { path: "sources/:id", element: <SourceDetailPage /> },
     ],
   },
 ]);

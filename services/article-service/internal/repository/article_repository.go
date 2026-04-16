@@ -27,33 +27,8 @@ func (r *ArticleRepository) List(ctx context.Context, params domain.ListArticles
 	if params.PageSize < 1 || params.PageSize > 100 {
 		params.PageSize = 20
 	}
-	sortColumn := "COALESCE(a.published_at, a.fetched_at)"
-	if params.Sort == "created_at" {
-		sortColumn = "a.created_at"
-	}
-	order := "DESC"
-	if strings.EqualFold(params.Order, "asc") {
-		order = "ASC"
-	}
-
-	where := []string{"1=1"}
-	args := make([]any, 0)
-
-	if params.Query != "" {
-		where = append(where, "(a.title LIKE ? OR a.excerpt LIKE ?)")
-		q := "%" + params.Query + "%"
-		args = append(args, q, q)
-	}
-	if params.Category != "" {
-		where = append(where, "a.category = ?")
-		args = append(args, params.Category)
-	}
-	if params.SourceID > 0 {
-		where = append(where, "a.source_id = ?")
-		args = append(args, params.SourceID)
-	}
-
-	whereClause := strings.Join(where, " AND ")
+	whereClause, args := buildArticleWhereClause(params.ArticleFilterParams)
+	sortColumn, order := buildArticleSortClause(params.ArticleFilterParams)
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM articles a WHERE %s", whereClause)
 	var total int
 	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
@@ -101,6 +76,45 @@ func (r *ArticleRepository) List(ctx context.Context, params domain.ListArticles
 	}, nil
 }
 
+func (r *ArticleRepository) Export(ctx context.Context, params domain.ExportArticlesParams) ([]domain.Article, error) {
+	limit := params.Limit
+	if limit < 1 {
+		limit = 1000
+	}
+
+	whereClause, args := buildArticleWhereClause(params.ArticleFilterParams)
+	sortColumn, order := buildArticleSortClause(params.ArticleFilterParams)
+	query := fmt.Sprintf(`
+		SELECT
+			a.id, a.title, a.url, a.source_id, s.name, a.published_at, a.fetched_at,
+			a.excerpt, a.category, a.tags, a.is_read, a.is_favorite, a.created_at, a.updated_at
+		FROM articles a
+		INNER JOIN sources s ON s.id = a.source_id
+		WHERE %s
+		ORDER BY %s %s
+		LIMIT ?`, whereClause, sortColumn, order)
+
+	// 上限超過は service 層で 400 に変換するため、limit+1 件だけ読んで検知する。
+	rows, err := r.db.QueryContext(ctx, query, append(args, limit+1)...)
+	if err != nil {
+		return nil, fmt.Errorf("export articles: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]domain.Article, 0)
+	for rows.Next() {
+		article, err := scanArticle(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, article)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate export articles: %w", err)
+	}
+	return items, nil
+}
+
 func (r *ArticleRepository) GetByID(ctx context.Context, id int64) (*domain.Article, error) {
 	query := `
 		SELECT
@@ -119,6 +133,42 @@ func (r *ArticleRepository) GetByID(ctx context.Context, id int64) (*domain.Arti
 		return nil, err
 	}
 	return &article, nil
+}
+
+func (r *ArticleRepository) UpdateReadStatus(ctx context.Context, id int64, isRead bool) (*domain.Article, error) {
+	result, err := r.db.ExecContext(ctx, "UPDATE articles SET is_read = ? WHERE id = ?", isRead, id)
+	if err != nil {
+		return nil, fmt.Errorf("update read status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("read rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, nil
+	}
+
+	// 更新後の最新行を返して、API レスポンスと一覧再表示の型を揃える。
+	return r.GetByID(ctx, id)
+}
+
+func (r *ArticleRepository) UpdateFavoriteStatus(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error) {
+	result, err := r.db.ExecContext(ctx, "UPDATE articles SET is_favorite = ? WHERE id = ?", isFavorite, id)
+	if err != nil {
+		return nil, fmt.Errorf("update favorite status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("favorite rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, nil
+	}
+
+	// read-status と同じ返却契約に寄せ、frontend が更新後データをそのまま再利用できるようにする。
+	return r.GetByID(ctx, id)
 }
 
 func (r *ArticleRepository) BulkUpsert(ctx context.Context, sourceID int64, articles []domain.Article) (inserted int, duplicated int, err error) {
@@ -212,4 +262,54 @@ func RFC3339OrNow(raw string) time.Time {
 		return time.Now().UTC()
 	}
 	return parsed
+}
+
+func buildArticleWhereClause(params domain.ArticleFilterParams) (string, []any) {
+	where := []string{"1=1"}
+	args := make([]any, 0)
+
+	if params.Query != "" {
+		where = append(where, "(a.title LIKE ? OR a.excerpt LIKE ?)")
+		q := "%" + params.Query + "%"
+		args = append(args, q, q)
+	}
+	if params.Category != "" {
+		where = append(where, "a.category = ?")
+		args = append(args, params.Category)
+	}
+	if params.SourceID > 0 {
+		where = append(where, "a.source_id = ?")
+		args = append(args, params.SourceID)
+	}
+	// 未読のみ・お気に入りのみを独立指定できる前提のため、bool 条件は個別に積み上げる。
+	if params.IsRead != nil {
+		where = append(where, "a.is_read = ?")
+		args = append(args, *params.IsRead)
+	}
+	if params.IsFavorite != nil {
+		where = append(where, "a.is_favorite = ?")
+		args = append(args, *params.IsFavorite)
+	}
+	if params.PublishedFrom != nil {
+		where = append(where, "a.published_at IS NOT NULL", "a.published_at >= ?")
+		args = append(args, params.PublishedFrom.UTC())
+	}
+	if params.PublishedTo != nil {
+		where = append(where, "a.published_at IS NOT NULL", "a.published_at <= ?")
+		args = append(args, params.PublishedTo.UTC())
+	}
+
+	return strings.Join(where, " AND "), args
+}
+
+func buildArticleSortClause(params domain.ArticleFilterParams) (string, string) {
+	sortColumn := "COALESCE(a.published_at, a.fetched_at)"
+	if params.Sort == "created_at" {
+		sortColumn = "a.created_at"
+	}
+	order := "DESC"
+	if strings.EqualFold(params.Order, "asc") {
+		order = "ASC"
+	}
+	return sortColumn, order
 }

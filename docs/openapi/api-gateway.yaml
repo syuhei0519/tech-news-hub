@@ -28,6 +28,24 @@ paths:
           schema:
             type: integer
         - in: query
+          name: is_read
+          schema:
+            type: boolean
+        - in: query
+          name: is_favorite
+          schema:
+            type: boolean
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
           name: page
           schema:
             type: integer
@@ -40,6 +58,69 @@ paths:
       responses:
         "200":
           description: Article list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListArticlesResponse"
+        "400":
+          description: Validation error
+  /api/v1/exports/articles.csv:
+    get:
+      summary: Export filtered articles as CSV
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: source_id
+          schema:
+            type: integer
+        - in: query
+          name: is_read
+          schema:
+            type: boolean
+        - in: query
+          name: is_favorite
+          schema:
+            type: boolean
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum:
+              - created_at
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Validation error
   /api/v1/articles/{id}:
     get:
       summary: Get article detail
@@ -52,3 +133,424 @@ paths:
       responses:
         "200":
           description: Article detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "404":
+          description: Article not found
+  /api/v1/articles/{id}/read-status:
+    patch:
+      summary: Update article read status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReadStatusInput"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          description: Validation error
+        "404":
+          description: Article not found
+  /api/v1/articles/{id}/favorite-status:
+    patch:
+      summary: Update article favorite status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteStatusInput"
+      responses:
+        "200":
+          description: Updated article
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Article"
+        "400":
+          description: Validation error
+        "404":
+          description: Article not found
+  /api/v1/sources:
+    get:
+      summary: List sources
+      responses:
+        "200":
+          description: Source list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Source"
+                required:
+                  - items
+    post:
+      summary: Create source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceInput"
+      responses:
+        "201":
+          description: Created source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "400":
+          description: Validation error
+        "409":
+          description: Source already exists
+  /api/v1/sources/{id}:
+    get:
+      summary: Get source detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Source detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "404":
+          description: Source not found
+    patch:
+      summary: Update source
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceInput"
+      responses:
+        "200":
+          description: Updated source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "400":
+          description: Validation error
+        "404":
+          description: Source not found
+        "409":
+          description: Source conflict
+    delete:
+      summary: Delete source
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Source deleted
+        "404":
+          description: Source not found
+        "409":
+          description: Source still referenced
+  /api/v1/fetch-jobs:
+    get:
+      summary: List fetch jobs for a source
+      parameters:
+        - in: query
+          name: source_id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - running
+              - success
+              - failed
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Fetch job list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListFetchJobsResponse"
+        "400":
+          description: Validation error
+components:
+  schemas:
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        source_id:
+          type: integer
+        source_name:
+          type: string
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        fetched_at:
+          type: string
+          format: date-time
+        excerpt:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        is_read:
+          type: boolean
+        is_favorite:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - url
+        - source_id
+        - source_name
+        - fetched_at
+        - excerpt
+        - category
+        - tags
+        - is_read
+        - is_favorite
+        - created_at
+        - updated_at
+    ListArticlesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - page_size
+        - total_pages
+    ReadStatusInput:
+      type: object
+      properties:
+        is_read:
+          type: boolean
+      required:
+        - is_read
+    FavoriteStatusInput:
+      type: object
+      properties:
+        is_favorite:
+          type: boolean
+      required:
+        - is_favorite
+    Source:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - rss
+        fetch_url:
+          type: string
+          format: uri
+        fetch_method:
+          type: string
+          enum:
+            - rss
+        interval_minutes:
+          type: integer
+        default_category:
+          type: string
+        is_enabled:
+          type: boolean
+        last_fetched_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_fetch_status:
+          type: string
+          nullable: true
+        last_error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - type
+        - fetch_url
+        - fetch_method
+        - interval_minutes
+        - default_category
+        - is_enabled
+        - created_at
+        - updated_at
+    SourceInput:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - rss
+        fetch_url:
+          type: string
+          format: uri
+        fetch_method:
+          type: string
+          enum:
+            - rss
+        interval_minutes:
+          type: integer
+          minimum: 1
+          maximum: 10080
+        default_category:
+          type: string
+        is_enabled:
+          type: boolean
+      required:
+        - name
+        - type
+        - fetch_url
+        - fetch_method
+        - interval_minutes
+        - default_category
+        - is_enabled
+    FetchJob:
+      type: object
+      properties:
+        id:
+          type: integer
+        source_id:
+          type: integer
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum:
+            - running
+            - success
+            - failed
+        fetched_count:
+          type: integer
+        inserted_count:
+          type: integer
+        duplicated_count:
+          type: integer
+        error_message:
+          type: string
+          nullable: true
+      required:
+        - id
+        - source_id
+        - started_at
+        - status
+        - fetched_count
+        - inserted_count
+        - duplicated_count
+    ListFetchJobsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FetchJob"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+      required:
+        - items
+        - total
+        - page
+        - page_size
+        - total_pages

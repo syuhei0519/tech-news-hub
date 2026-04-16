@@ -94,6 +94,8 @@
 - 重要な設計判断は ADR 化対象か確認する
 - 既知制約なら `docs/known-issues.md` 更新対象か確認する
 - 重要変更なら `CHANGELOG.md` 更新対象か確認する
+- 処理意図が読み取りにくい実装には、明示指示がなくても日本語コメントを補う
+- コメントは「なぜそうしているか」を優先し、逐語説明や一時メモは残さない
 
 ### When Reviewing
 
@@ -104,6 +106,15 @@
 - 初期スコープ外の複雑化が入っていないか
 - ドキュメント更新漏れがないか
 - `docs/dod.md` を満たしているか
+- PR の題名と本文が、明示的な指示なしで英語になっていないか
+- 変更箇所のうち意図が追いにくい部分に、日本語コメントが不足していないか
+
+### CI Interpretation
+
+- 通常のコード変更では `make verify` を回す
+- docs-only 変更では、required status check を壊さない範囲で重い検証を省略してよい
+- その場合でも `verify` チェック自体は成功状態を返す
+- docs-only 判定ロジックは `.github/workflows/ci.yml` を正本とする
 
 ## Update Policy
 
@@ -342,6 +353,7 @@ Issue 作成時は、ルールや要件に関係する背景を記載する。
 - 標準検証は `make verify` を使う
 - コミットメッセージ規約は `docs/naming-conventions.md` を参照し、日本語で記述する
 - Git 運用は `docs/branch-strategy.md` を参照する
+- docs-only 変更時の CI 軽量化ルールは `.github/workflows/ci.yml` と `docs/test-policy.md` を参照する
 
 ## Notes
 
