@@ -73,6 +73,7 @@ func (r *FetchJobRepository) List(ctx context.Context, params domain.ListFetchJo
 	}
 
 	offset := (params.Page - 1) * params.PageSize
+	// source 詳細では「新しい失敗を先に見る」体験を優先するため、開始時刻の降順を正本にする。
 	listQuery := fmt.Sprintf(`
 		SELECT id, source_id, started_at, finished_at, status, fetched_count, inserted_count, duplicated_count, error_message
 		FROM fetch_jobs
@@ -138,6 +139,7 @@ func scanFetchJob(scanner interface {
 	var finishedAt sql.NullTime
 	var errorMessage sql.NullString
 
+	// nullable を repository で吸収し、service / handler ではポインタの有無だけを見ればよい形に揃える。
 	if err := scanner.Scan(
 		&job.ID,
 		&job.SourceID,

@@ -69,6 +69,7 @@ func NewArticleService(articleRepo *repository.ArticleRepository, sourceRepo *re
 }
 
 func (s *ArticleService) ListFetchJobs(ctx context.Context, params domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+	// 履歴一覧は source 詳細画面から使う前提のため、source 単位での絞り込みを必須にする。
 	if params.SourceID < 1 {
 		return domain.ListFetchJobsResult{}, newServiceError(ErrValidation, "source_id is required")
 	}
@@ -194,6 +195,7 @@ func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestR
 		return IngestResult{}, newServiceError(ErrValidation, "source_id is required")
 	}
 
+	// job の作成と完了は collector の前後処理に寄せ、ingest 自体は記事登録だけに責務を絞る。
 	job, err := s.jobRepo.GetByID(ctx, req.JobID)
 	if err != nil {
 		return IngestResult{}, err
@@ -251,6 +253,7 @@ type StartFetchJobResult struct {
 }
 
 func (s *ArticleService) StartFetchJob(ctx context.Context, input StartFetchJobInput) (StartFetchJobResult, error) {
+	// collector は source 管理とまだ直結していないため、静的設定の source でも同じ入口で解決する。
 	sourceID, err := s.sourceRepo.EnsureSource(ctx, domain.Source{
 		Name:            input.Source.Name,
 		Type:            input.Source.Type,
@@ -304,6 +307,7 @@ func (s *ArticleService) FinishFetchJob(ctx context.Context, jobID int64, input 
 		return newServiceError(ErrConflict, "fetch job is already finished")
 	}
 
+	// source 一覧と詳細で最後の取得状態を即座に出せるよう、job 完了と source 状態更新を同じ service に集約する。
 	errorMessage := normalizeOptionalString(input.ErrorMessage)
 	if input.Status == "failed" && errorMessage == nil {
 		return newServiceError(ErrValidation, "error_message is required when status is failed")

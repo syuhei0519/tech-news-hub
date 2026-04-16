@@ -95,6 +95,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
 			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
 
+			// source 詳細画面の一覧要件をそのまま受けるだけに留め、絞り込み仕様は service 側で統一する。
 			result, err := articleService.ListFetchJobs(c.Request.Context(), domain.ListFetchJobsParams{
 				SourceID: sourceID,
 				Status:   c.Query("status"),
@@ -201,6 +202,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 				return
 			}
 
+			// ingest 単体の失敗は collector が finish API で閉じるため、ここでは記事登録結果だけ返す。
 			result, err := articleService.Ingest(c.Request.Context(), req)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

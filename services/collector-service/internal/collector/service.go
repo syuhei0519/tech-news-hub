@@ -89,6 +89,7 @@ func NewService(articleServiceURL string, sources []SourceConfig) *Service {
 func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
 	results := make([]RunResult, 0, len(s.sources))
 	for _, source := range s.sources {
+		// source ごとに順に処理し、どの source で止まったかを呼び出し側から判断しやすくする。
 		result, err := s.collectSource(ctx, source)
 		if err != nil {
 			return results, err
@@ -99,6 +100,7 @@ func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
 }
 
 func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunResult, error) {
+	// 「開始済みなのに履歴が残らない」を避けるため、外部取得より先に job を起票する。
 	started, err := s.startFetchJob(ctx, source)
 	if err != nil {
 		return RunResult{}, err
@@ -106,6 +108,7 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 
 	items, err := s.fetchRSS(ctx, source)
 	if err != nil {
+		// 取得失敗も UI から見えることが Issue #2 の主目的なので、失敗時は必ず finish を打つ。
 		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
 			Status:       "failed",
 			ErrorMessage: stringPtr(err.Error()),
@@ -196,6 +199,7 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 		return RunResult{}, fmt.Errorf("decode ingest response: %w", err)
 	}
 
+	// article-service 側で集計した件数を finish に渡し、履歴一覧と source 状態の数字を揃える。
 	if err := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
 		Status:          "success",
 		FetchedCount:    len(items),
@@ -226,6 +230,7 @@ type startFetchJobResult struct {
 }
 
 func (s *Service) startFetchJob(ctx context.Context, source SourceConfig) (startFetchJobResult, error) {
+	// source 情報は start API にも渡し、article-service 側で source 解決と job 作成を一貫して行う。
 	payload := startFetchJobPayload{
 		Source: IngestSource{
 			Name:            source.Name,
@@ -275,6 +280,7 @@ type finishFetchJobPayload struct {
 }
 
 func (s *Service) finishFetchJob(ctx context.Context, jobID int64, payload finishFetchJobPayload) error {
+	// finish API を単一の出口にして、collector 側の失敗種別に関係なく同じ履歴更新経路へ流す。
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal fetch job finish payload: %w", err)
