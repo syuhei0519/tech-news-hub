@@ -55,7 +55,7 @@
 - `GET /api/v1/sources`
 - `POST /api/v1/sources`
 - `PATCH /api/v1/sources/{id}`
-- `POST /api/v1/exports/articles.csv`
+- `GET /api/v1/exports/articles.csv`
 
 ## Query Parameter Rules
 

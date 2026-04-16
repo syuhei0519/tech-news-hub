@@ -26,6 +26,7 @@
 - `api-gateway` 経由のソース管理 API 公開
 - `collector-service` の最小 RSS 収集フロー
 - `frontend` の記事一覧 / 詳細 / 検索画面
+- `frontend` の記事検索結果 CSV ダウンロード
 - `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
 - `frontend` の source 詳細と取得ジョブ履歴確認画面
 - MySQL 初期スキーマ
@@ -44,10 +45,10 @@
 
 ## Highest Priority Next
 
-1. 既読 / お気に入り管理
-2. CSV 出力
-3. collector-service のソース管理連携
-4. notification-service と RabbitMQ 連携
+1. collector-service のソース管理連携
+2. notification-service と RabbitMQ 連携
+3. Compose 整備、GitHub Actions、OpenAPI 保守
+4. kind / Helm / Argo CD の整備
 
 ## Open GitHub Issues
 
@@ -63,8 +64,6 @@
 
 - ソース管理 UI/API とジョブ履歴 UI/API は実装済みだが、collector-service はまだ静的設定依存
 - 認証は未実装
-- 既読 / お気に入りは未実装
-- CSV 出力は未実装
 - Notification と RabbitMQ は未実装
 - kind / Helm / Argo CD は未着手
 

@@ -8,9 +8,14 @@
 
 - `AGENT.md` と `README.md` の現在地を Phase 1 完了後の状態に同期
 - `docs/current-status.md` と `docs/known-issues.md` をソース管理実装後の状態に更新
+- 記事一覧 API と CSV エクスポートで `source_id`, `from`, `to` を含む共通フィルタを利用
+- `api-gateway` の CSV API 方針を `GET /api/v1/exports/articles.csv` に統一
 
 ### Added
 
+- article-service の記事 CSV エクスポート API
+- api-gateway 経由の CSV ダウンロード API
+- frontend の source / 公開日範囲フィルタと CSV ダウンロード導線
 - article-service のソース管理 CRUD API
 - api-gateway 経由のソース管理 API 公開
 - frontend のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
