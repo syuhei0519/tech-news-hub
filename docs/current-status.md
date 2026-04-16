@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-- 現在は Phase 1 完了後、Phase 2 着手前
+- 現在は Phase 2 実装中
 
 ## What Is Already Implemented
 
@@ -16,9 +16,17 @@
   - 記事詳細
   - 検索
   - collector 向け ingest API
+- `article-service` のソース管理 API
+  - ソース一覧
+  - ソース詳細
+  - ソース作成
+  - ソース更新
+  - ソース削除
 - `api-gateway` の最小プロキシ
+- `api-gateway` 経由のソース管理 API 公開
 - `collector-service` の最小 RSS 収集フロー
 - `frontend` の記事一覧 / 詳細 / 検索画面
+- `frontend` のソース一覧 / 作成 / 編集 / 有効無効切り替え画面
 - MySQL 初期スキーマ
 - Docker Compose 起動基盤
 - ルール / 要件 / ガイドライン / ADR のドキュメント群
@@ -35,14 +43,13 @@
 
 ## Highest Priority Next
 
-1. ソース管理 API と UI
-2. 取得ジョブ履歴と失敗状況の可視化
-3. 既読 / お気に入り管理
-4. CSV 出力
+1. 取得ジョブ履歴と失敗状況の可視化
+2. 既読 / お気に入り管理
+3. CSV 出力
+4. collector-service のソース管理連携
 
 ## Open GitHub Issues
 
-- `#1` `[Phase 2] ソース管理 API と UI の実装`
 - `#2` `[Phase 2] 取得ジョブ履歴と失敗状況の可視化`
 - `#3` `[Phase 2] 既読 / お気に入り管理の実装`
 - `#4` `[Phase 2] 記事検索結果の CSV 出力実装`
@@ -53,7 +60,7 @@
 
 ## Known Gaps
 
-- ソース管理はまだ collector の静的設定依存
+- ソース管理 UI/API は実装済みだが、collector-service はまだ静的設定依存
 - 認証は未実装
 - 既読 / お気に入りは未実装
 - CSV 出力は未実装

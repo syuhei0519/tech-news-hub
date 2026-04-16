@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -65,6 +66,77 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 
 			c.JSON(http.StatusOK, article)
 		})
+
+		v1.GET("/sources", func(c *gin.Context) {
+			sources, err := articleService.ListSources(c.Request.Context())
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"items": sources})
+		})
+
+		v1.GET("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			source, err := articleService.GetSource(c.Request.Context(), id)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, source)
+		})
+
+		v1.POST("/sources", func(c *gin.Context) {
+			var req service.SourceInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			source, err := articleService.CreateSource(c.Request.Context(), req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusCreated, source)
+		})
+
+		v1.PATCH("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			var req service.SourceInput
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			source, err := articleService.UpdateSource(c.Request.Context(), id, req)
+			if err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, source)
+		})
+
+		v1.DELETE("/sources/:id", func(c *gin.Context) {
+			id, err := parseIDParam(c, "source id")
+			if err != nil {
+				return
+			}
+
+			if err := articleService.DeleteSource(c.Request.Context(), id); err != nil {
+				writeServiceError(c, err)
+				return
+			}
+			c.Status(http.StatusNoContent)
+		})
 	}
 
 	internal := router.Group("/internal")
@@ -94,4 +166,26 @@ func defaultString(value string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func parseIDParam(c *gin.Context, label string) (int64, error) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid " + label})
+		return 0, err
+	}
+	return id, nil
+}
+
+func writeServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, service.ErrValidation):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case errors.Is(err, service.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, service.ErrConflict):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }

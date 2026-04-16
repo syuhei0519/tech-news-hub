@@ -30,6 +30,32 @@ export type ListArticlesResponse = {
   total_pages: number;
 };
 
+export type Source = {
+  id: number;
+  name: string;
+  type: string;
+  fetch_url: string;
+  fetch_method: string;
+  interval_minutes: number;
+  default_category: string;
+  is_enabled: boolean;
+  last_fetched_at: string | null;
+  last_fetch_status: string | null;
+  last_error_message: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SourceInput = {
+  name: string;
+  type: string;
+  fetch_url: string;
+  fetch_method: string;
+  interval_minutes: number;
+  default_category: string;
+  is_enabled: boolean;
+};
+
 export async function fetchArticles(params: {
   q?: string;
   category?: string;
@@ -42,4 +68,23 @@ export async function fetchArticles(params: {
 export async function fetchArticle(id: string) {
   const response = await api.get<Article>(`/api/v1/articles/${id}`);
   return response.data;
+}
+
+export async function fetchSources() {
+  const response = await api.get<{ items: Source[] }>("/api/v1/sources");
+  return response.data.items;
+}
+
+export async function createSource(input: SourceInput) {
+  const response = await api.post<Source>("/api/v1/sources", input);
+  return response.data;
+}
+
+export async function updateSource(id: number, input: SourceInput) {
+  const response = await api.patch<Source>(`/api/v1/sources/${id}`, input);
+  return response.data;
+}
+
+export async function deleteSource(id: number) {
+  await api.delete(`/api/v1/sources/${id}`);
 }
