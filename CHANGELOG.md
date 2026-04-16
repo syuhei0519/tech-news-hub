@@ -6,8 +6,9 @@
 
 ### Changed
 
-- `AGENT.md` と `README.md` の現在地を Phase 1 完了後の状態に同期
-- `docs/current-status.md` と `docs/known-issues.md` をソース管理実装後の状態に更新
+- 進捗系ドキュメントを Phase 2 の主要機能実装後、Phase 3 着手前の状態に同期
+- `docs/current-status.md` の Open GitHub Issues を現行の open issue に更新
+- `docs/backlog-priority.md` の優先順位を現状の残課題と open issue に合わせて更新
 - 記事一覧 API と CSV エクスポートで `source_id`, `from`, `to` を含む共通フィルタを利用
 - `api-gateway` の CSV API 方針を `GET /api/v1/exports/articles.csv` に統一
 
