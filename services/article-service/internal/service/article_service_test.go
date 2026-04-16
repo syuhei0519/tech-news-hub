@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 type stubArticleRepo struct {
 	listFunc                 func(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
+	exportFunc               func(ctx context.Context, params domain.ExportArticlesParams) ([]domain.Article, error)
 	getByIDFunc              func(ctx context.Context, id int64) (*domain.Article, error)
 	updateReadStatusFunc     func(ctx context.Context, id int64, isRead bool) (*domain.Article, error)
 	updateFavoriteStatusFunc func(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error)
@@ -22,6 +24,13 @@ func (r *stubArticleRepo) List(ctx context.Context, params domain.ListArticlesPa
 		return r.listFunc(ctx, params)
 	}
 	return domain.ListArticlesResult{}, nil
+}
+
+func (r *stubArticleRepo) Export(ctx context.Context, params domain.ExportArticlesParams) ([]domain.Article, error) {
+	if r.exportFunc != nil {
+		return r.exportFunc(ctx, params)
+	}
+	return nil, nil
 }
 
 func (r *stubArticleRepo) GetByID(ctx context.Context, id int64) (*domain.Article, error) {
@@ -307,8 +316,10 @@ func TestListArticlesPassesReadAndFavoriteFilters(t *testing.T) {
 	}
 
 	_, err := service.ListArticles(context.Background(), domain.ListArticlesParams{
-		IsRead:     &isRead,
-		IsFavorite: &isFavorite,
+		ArticleFilterParams: domain.ArticleFilterParams{
+			IsRead:     &isRead,
+			IsFavorite: &isFavorite,
+		},
 	})
 	if err != nil {
 		t.Fatalf("ListArticles returned error: %v", err)
@@ -376,5 +387,142 @@ func TestUpdateFavoriteStatusReturnsNotFoundWhenArticleMissing(t *testing.T) {
 	_, err := service.UpdateFavoriteStatus(context.Background(), 8, UpdateFavoriteStatusInput{IsFavorite: true})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got: %v", err)
+	}
+}
+
+func TestExportArticlesCSVFormatsRowsAndPassesFilters(t *testing.T) {
+	t.Parallel()
+
+	isFavorite := true
+	from := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 4, 30, 23, 59, 59, 0, time.UTC)
+	publishedAt := time.Date(2026, 4, 14, 12, 34, 56, 0, time.UTC)
+	fetchedAt := time.Date(2026, 4, 14, 12, 35, 10, 0, time.UTC)
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			exportFunc: func(_ context.Context, params domain.ExportArticlesParams) ([]domain.Article, error) {
+				if params.SourceID != 9 {
+					t.Fatalf("unexpected source_id: %d", params.SourceID)
+				}
+				if params.IsFavorite == nil || *params.IsFavorite != isFavorite {
+					t.Fatalf("unexpected is_favorite: %#v", params.IsFavorite)
+				}
+				if params.PublishedFrom == nil || !params.PublishedFrom.Equal(from) {
+					t.Fatalf("unexpected from: %#v", params.PublishedFrom)
+				}
+				if params.PublishedTo == nil || !params.PublishedTo.Equal(to) {
+					t.Fatalf("unexpected to: %#v", params.PublishedTo)
+				}
+				return []domain.Article{{
+					Title:       "=danger",
+					URL:         "https://example.com/articles/1",
+					SourceName:  "Kubernetes Blog",
+					Category:    "kubernetes",
+					PublishedAt: &publishedAt,
+					FetchedAt:   fetchedAt,
+					IsRead:      false,
+					IsFavorite:  true,
+					Excerpt:     "@formula",
+					Tags:        []string{"go", "k8s"},
+				}}, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	data, err := service.ExportArticlesCSV(context.Background(), domain.ExportArticlesParams{
+		ArticleFilterParams: domain.ArticleFilterParams{
+			SourceID:      9,
+			IsFavorite:    &isFavorite,
+			PublishedFrom: &from,
+			PublishedTo:   &to,
+		},
+		Limit: 1000,
+	})
+	if err != nil {
+		t.Fatalf("ExportArticlesCSV returned error: %v", err)
+	}
+
+	got := string(data)
+	if !strings.HasPrefix(got, "\uFEFFtitle,url,source_name,category,published_at,fetched_at,is_read,is_favorite,excerpt,tags\n") {
+		t.Fatalf("unexpected csv header: %q", got)
+	}
+	if !strings.Contains(got, "'=danger,https://example.com/articles/1,Kubernetes Blog,kubernetes,2026-04-14T12:34:56Z,2026-04-14T12:35:10Z,false,true,'@formula,go;k8s\n") {
+		t.Fatalf("unexpected csv row: %q", got)
+	}
+}
+
+func TestExportArticlesCSVRejectsInvalidDateRange(t *testing.T) {
+	t.Parallel()
+
+	from := time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 4, 19, 0, 0, 0, 0, time.UTC)
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.ExportArticlesCSV(context.Background(), domain.ExportArticlesParams{
+		ArticleFilterParams: domain.ArticleFilterParams{
+			PublishedFrom: &from,
+			PublishedTo:   &to,
+		},
+		Limit: 1000,
+	})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestExportArticlesCSVRejectsResultOverLimit(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			exportFunc: func(context.Context, domain.ExportArticlesParams) ([]domain.Article, error) {
+				return []domain.Article{{Title: "1"}, {Title: "2"}}, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.ExportArticlesCSV(context.Background(), domain.ExportArticlesParams{Limit: 1})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation, got: %v", err)
 	}
 }

@@ -36,6 +36,16 @@ paths:
           schema:
             type: boolean
         - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
           name: page
           schema:
             type: integer
@@ -52,6 +62,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ListArticlesResponse"
+        "400":
+          description: Validation error
+  /api/v1/exports/articles.csv:
+    get:
+      summary: Export filtered articles as CSV
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: source_id
+          schema:
+            type: integer
+        - in: query
+          name: is_read
+          schema:
+            type: boolean
+        - in: query
+          name: is_favorite
+          schema:
+            type: boolean
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum:
+              - created_at
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Validation error
   /api/v1/articles/{id}:
     get:
       summary: Get article detail
