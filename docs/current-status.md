@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-- 現在は Phase 2 実装中
+- 現在は Phase 2 の主要機能実装が完了し、Phase 3 着手前
 
 ## What Is Already Implemented
 
@@ -45,16 +45,13 @@
 
 ## Highest Priority Next
 
-1. collector-service のソース管理連携
-2. notification-service と RabbitMQ 連携
+1. notification-service と RabbitMQ 連携
+2. collector-service の動的ソース同期
 3. Compose 整備、GitHub Actions、OpenAPI 保守
 4. kind / Helm / Argo CD の整備
 
 ## Open GitHub Issues
 
-- `#2` `[Phase 2] 取得ジョブ履歴と失敗状況の可視化`
-- `#3` `[Phase 2] 既読 / お気に入り管理の実装`
-- `#4` `[Phase 2] 記事検索結果の CSV 出力実装`
 - `#8` `[Phase 3] notification-service と RabbitMQ 連携の実装`
 - `#5` `[Phase 4] Compose 整備、GitHub Actions、OpenAPI 保守`
 - `#7` `[Phase 5] kind デプロイ、Helm Chart、Argo CD の整備`

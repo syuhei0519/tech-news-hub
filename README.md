@@ -13,20 +13,22 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 - `deployments/k8s`: kind / Helm / Argo CD 向け土台
 - `docs`: API設計・フェーズ計画
 
-## Phase 1
+## Current Status
 
-Phase 1 では以下を実装対象とします。
+Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能も実装済みです。
 
-- article-service
-- collector-service の最小収集フロー
-- api-gateway
-- frontend
+- article-service / collector-service / api-gateway / frontend
 - MySQL 接続
 - 記事一覧 / 詳細 / 検索
+- 既読 / お気に入り管理
+- ソース管理
+- 記事検索結果の CSV 出力
+- 取得ジョブ履歴の表示
 
 現在地:
 
-- Phase 1 完了後、Phase 2 着手前
+- Phase 2 の主要機能実装が完了し、Phase 3 着手前
+- collector-service はまだ静的 source 設定依存
 - 検証状態の詳細は `docs/current-status.md` を参照
 
 ## Planned Repository Structure

@@ -51,7 +51,7 @@
 
 ## Current Phase
 
-現在は Phase 1 完了後、Phase 2 着手前です。
+現在は Phase 2 の主要機能実装が完了し、Phase 3 着手前です。
 
 Phase 1 で完了した範囲:
 
@@ -62,12 +62,22 @@ Phase 1 で完了した範囲:
 - MySQL 接続
 - 記事一覧 / 詳細 / 検索
 
-次フェーズでは以下を追加します。
+Phase 2 で完了した範囲:
 
-- ソース管理
 - 既読 / お気に入り
+- ソース管理
 - CSV 出力
 - 取得ジョブ履歴
+
+現在の残課題:
+
+- collector-service はまだ静的設定ベースで、source 管理 API とは未連携
+
+次フェーズでは以下を追加します。
+
+- notification-service の実装
+- RabbitMQ 連携
+- 取得失敗通知とダイジェストの導入
 
 ## Service Responsibilities
 
@@ -221,8 +231,7 @@ npm run build
 
 次に着手する優先順は以下です。
 
-1. article-service にソース管理 API を追加
-2. article-service に既読 / お気に入り更新 API を追加
-3. CSV 出力 API を api-gateway 経由で追加
-4. fetch job history 一覧 API を追加
-5. frontend に管理画面を追加
+1. notification-service と RabbitMQ 連携を実装
+2. collector-service の動的ソース同期を進める
+3. Compose 整備、GitHub Actions、OpenAPI 保守を進める
+4. kind / Helm / Argo CD の整備に着手する

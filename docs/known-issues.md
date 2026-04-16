@@ -19,11 +19,6 @@
 - api-gateway に JWT の導入ポイントはあるが、実装は未着手
 - 初期は単一ユーザー前提のため後ろ倒し
 
-### CSV Export Is Not Implemented Yet
-
-- 要件にはあるが、現状は記事一覧 / 詳細 / 検索まで
-- Phase 2 の `#4` で対応予定
-
 ### Notification Flow Is Not Implemented Yet
 
 - notification-service は health endpoint のみ
