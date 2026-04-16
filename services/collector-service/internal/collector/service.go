@@ -35,6 +35,8 @@ type rssItem struct {
 }
 
 type IngestPayload struct {
+	JobID    int64           `json:"job_id"`
+	SourceID int64           `json:"source_id"`
 	Source   IngestSource    `json:"source"`
 	Articles []IngestArticle `json:"articles"`
 }
@@ -61,9 +63,13 @@ type IngestArticle struct {
 
 type RunResult struct {
 	SourceName      string `json:"source_name"`
+	SourceID        int64  `json:"source_id"`
+	JobID           int64  `json:"job_id"`
+	Status          string `json:"status"`
 	FetchedCount    int    `json:"fetched_count"`
 	InsertedCount   int    `json:"inserted_count"`
 	DuplicatedCount int    `json:"duplicated_count"`
+	ErrorMessage    string `json:"error_message,omitempty"`
 }
 
 type Service struct {
@@ -93,12 +99,26 @@ func (s *Service) Run(ctx context.Context) ([]RunResult, error) {
 }
 
 func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunResult, error) {
-	items, err := s.fetchRSS(ctx, source)
+	started, err := s.startFetchJob(ctx, source)
 	if err != nil {
 		return RunResult{}, err
 	}
 
+	items, err := s.fetchRSS(ctx, source)
+	if err != nil {
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(err.Error()),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
+		return RunResult{}, err
+	}
+
 	payload := IngestPayload{
+		JobID:    started.JobID,
+		SourceID: started.SourceID,
 		Source: IngestSource{
 			Name:            source.Name,
 			Type:            source.Type,
@@ -112,24 +132,53 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 
 	body, err := json.Marshal(payload)
 	if err != nil {
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(fmt.Sprintf("marshal ingest payload: %v", err)),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
 		return RunResult{}, fmt.Errorf("marshal ingest payload: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.articleServiceURL+"/internal/ingest", bytes.NewReader(body))
 	if err != nil {
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(fmt.Sprintf("create ingest request: %v", err)),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
 		return RunResult{}, fmt.Errorf("create ingest request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(fmt.Sprintf("send ingest request: %v", err)),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
 		return RunResult{}, fmt.Errorf("send ingest request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		raw, _ := io.ReadAll(resp.Body)
-		return RunResult{}, fmt.Errorf("ingest failed: status=%d body=%s", resp.StatusCode, string(raw))
+		message := fmt.Sprintf("ingest failed: status=%d body=%s", resp.StatusCode, string(raw))
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(message),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
+		return RunResult{}, fmt.Errorf("%s", message)
 	}
 
 	var ingestResult struct {
@@ -137,15 +186,117 @@ func (s *Service) collectSource(ctx context.Context, source SourceConfig) (RunRe
 		DuplicatedCount int `json:"duplicated_count"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&ingestResult); err != nil {
+		finishErr := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+			Status:       "failed",
+			ErrorMessage: stringPtr(fmt.Sprintf("decode ingest response: %v", err)),
+		})
+		if finishErr != nil {
+			return RunResult{}, finishErr
+		}
 		return RunResult{}, fmt.Errorf("decode ingest response: %w", err)
+	}
+
+	if err := s.finishFetchJob(ctx, started.JobID, finishFetchJobPayload{
+		Status:          "success",
+		FetchedCount:    len(items),
+		InsertedCount:   ingestResult.InsertedCount,
+		DuplicatedCount: ingestResult.DuplicatedCount,
+	}); err != nil {
+		return RunResult{}, err
 	}
 
 	return RunResult{
 		SourceName:      source.Name,
+		SourceID:        started.SourceID,
+		JobID:           started.JobID,
+		Status:          "success",
 		FetchedCount:    len(items),
 		InsertedCount:   ingestResult.InsertedCount,
 		DuplicatedCount: ingestResult.DuplicatedCount,
 	}, nil
+}
+
+type startFetchJobPayload struct {
+	Source IngestSource `json:"source"`
+}
+
+type startFetchJobResult struct {
+	SourceID int64 `json:"source_id"`
+	JobID    int64 `json:"job_id"`
+}
+
+func (s *Service) startFetchJob(ctx context.Context, source SourceConfig) (startFetchJobResult, error) {
+	payload := startFetchJobPayload{
+		Source: IngestSource{
+			Name:            source.Name,
+			Type:            source.Type,
+			FetchURL:        source.URL,
+			FetchMethod:     "rss",
+			IntervalMinutes: 60,
+			DefaultCategory: source.DefaultCategory,
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return startFetchJobResult{}, fmt.Errorf("marshal fetch job start payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.articleServiceURL+"/internal/fetch-jobs/start", bytes.NewReader(body))
+	if err != nil {
+		return startFetchJobResult{}, fmt.Errorf("create fetch job start request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return startFetchJobResult{}, fmt.Errorf("send fetch job start request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		raw, _ := io.ReadAll(resp.Body)
+		return startFetchJobResult{}, fmt.Errorf("fetch job start failed: status=%d body=%s", resp.StatusCode, string(raw))
+	}
+
+	var result startFetchJobResult
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return startFetchJobResult{}, fmt.Errorf("decode fetch job start response: %w", err)
+	}
+	return result, nil
+}
+
+type finishFetchJobPayload struct {
+	Status          string  `json:"status"`
+	FetchedCount    int     `json:"fetched_count"`
+	InsertedCount   int     `json:"inserted_count"`
+	DuplicatedCount int     `json:"duplicated_count"`
+	ErrorMessage    *string `json:"error_message"`
+}
+
+func (s *Service) finishFetchJob(ctx context.Context, jobID int64, payload finishFetchJobPayload) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal fetch job finish payload: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("%s/internal/fetch-jobs/%d/finish", s.articleServiceURL, jobID), bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create fetch job finish request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("send fetch job finish request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		raw, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("fetch job finish failed: status=%d body=%s", resp.StatusCode, string(raw))
+	}
+	return nil
 }
 
 func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestArticle, error) {
@@ -222,4 +373,8 @@ func stripHTML(value string) string {
 	cleaned := replacer.Replace(value)
 	cleaned = strings.NewReplacer("<", " ", ">", " ").Replace(cleaned)
 	return strings.Join(strings.Fields(cleaned), " ")
+}
+
+func stringPtr(value string) *string {
+	return &value
 }

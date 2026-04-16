@@ -33,6 +33,10 @@ func RegisterRoutes(router *gin.Engine, articleServiceURL string) {
 			targetURL := articleServiceURL + "/api/v1/sources/" + c.Param("id")
 			proxyRequest(c, client, targetURL)
 		})
+		v1.GET("/fetch-jobs", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/fetch-jobs"
+			proxyRequest(c, client, targetURL)
+		})
 		v1.POST("/sources", func(c *gin.Context) {
 			targetURL := articleServiceURL + "/api/v1/sources"
 			proxyRequest(c, client, targetURL)

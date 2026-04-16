@@ -56,6 +56,26 @@ export type SourceInput = {
   is_enabled: boolean;
 };
 
+export type FetchJob = {
+  id: number;
+  source_id: number;
+  started_at: string;
+  finished_at: string | null;
+  status: "running" | "success" | "failed";
+  fetched_count: number;
+  inserted_count: number;
+  duplicated_count: number;
+  error_message: string | null;
+};
+
+export type ListFetchJobsResponse = {
+  items: FetchJob[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export async function fetchArticles(params: {
   q?: string;
   category?: string;
@@ -73,6 +93,21 @@ export async function fetchArticle(id: string) {
 export async function fetchSources() {
   const response = await api.get<{ items: Source[] }>("/api/v1/sources");
   return response.data.items;
+}
+
+export async function fetchSource(id: string | number) {
+  const response = await api.get<Source>(`/api/v1/sources/${id}`);
+  return response.data;
+}
+
+export async function fetchFetchJobs(params: {
+  source_id: number;
+  status?: "running" | "success" | "failed";
+  page?: number;
+  page_size?: number;
+}) {
+  const response = await api.get<ListFetchJobsResponse>("/api/v1/fetch-jobs", { params });
+  return response.data;
 }
 
 export async function createSource(input: SourceInput) {

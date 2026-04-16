@@ -32,9 +32,32 @@ func (e *serviceError) Unwrap() error {
 }
 
 type ArticleService struct {
-	articleRepo *repository.ArticleRepository
-	sourceRepo  *repository.SourceRepository
-	jobRepo     *repository.FetchJobRepository
+	articleRepo articleRepository
+	sourceRepo  sourceRepository
+	jobRepo     fetchJobRepository
+}
+
+type articleRepository interface {
+	List(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
+	GetByID(ctx context.Context, id int64) (*domain.Article, error)
+	BulkUpsert(ctx context.Context, sourceID int64, articles []domain.Article) (inserted int, duplicated int, err error)
+}
+
+type sourceRepository interface {
+	List(ctx context.Context) ([]domain.Source, error)
+	GetByID(ctx context.Context, id int64) (*domain.Source, error)
+	Create(ctx context.Context, source domain.Source) (*domain.Source, error)
+	Update(ctx context.Context, source domain.Source) (*domain.Source, error)
+	Delete(ctx context.Context, id int64) (bool, error)
+	EnsureSource(ctx context.Context, source domain.Source) (int64, error)
+	UpdateFetchStatus(ctx context.Context, id int64, status string, errMsg *string) error
+}
+
+type fetchJobRepository interface {
+	Create(ctx context.Context, sourceID int64) (int64, error)
+	GetByID(ctx context.Context, id int64) (*domain.FetchJob, error)
+	List(ctx context.Context, params domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error)
+	Finish(ctx context.Context, jobID int64, status string, fetchedCount int, insertedCount int, duplicatedCount int, errMsg *string) error
 }
 
 func NewArticleService(articleRepo *repository.ArticleRepository, sourceRepo *repository.SourceRepository, jobRepo *repository.FetchJobRepository) *ArticleService {
@@ -43,6 +66,16 @@ func NewArticleService(articleRepo *repository.ArticleRepository, sourceRepo *re
 		sourceRepo:  sourceRepo,
 		jobRepo:     jobRepo,
 	}
+}
+
+func (s *ArticleService) ListFetchJobs(ctx context.Context, params domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+	if params.SourceID < 1 {
+		return domain.ListFetchJobsResult{}, newServiceError(ErrValidation, "source_id is required")
+	}
+	if params.Status != "" && params.Status != "running" && params.Status != "success" && params.Status != "failed" {
+		return domain.ListFetchJobsResult{}, newServiceError(ErrValidation, "status must be running, success, or failed")
+	}
+	return s.jobRepo.List(ctx, params)
 }
 
 func (s *ArticleService) ListArticles(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error) {
@@ -139,6 +172,8 @@ type IngestArticleInput struct {
 }
 
 type IngestRequest struct {
+	JobID    int64                `json:"job_id"`
+	SourceID int64                `json:"source_id"`
 	Source   IngestSourceInput    `json:"source"`
 	Articles []IngestArticleInput `json:"articles"`
 }
@@ -152,21 +187,25 @@ type IngestResult struct {
 }
 
 func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestResult, error) {
-	sourceID, err := s.sourceRepo.EnsureSource(ctx, domain.Source{
-		Name:            req.Source.Name,
-		Type:            req.Source.Type,
-		FetchURL:        req.Source.FetchURL,
-		FetchMethod:     req.Source.FetchMethod,
-		IntervalMinutes: req.Source.IntervalMinutes,
-		DefaultCategory: req.Source.DefaultCategory,
-	})
+	if req.JobID < 1 {
+		return IngestResult{}, newServiceError(ErrValidation, "job_id is required")
+	}
+	if req.SourceID < 1 {
+		return IngestResult{}, newServiceError(ErrValidation, "source_id is required")
+	}
+
+	job, err := s.jobRepo.GetByID(ctx, req.JobID)
 	if err != nil {
 		return IngestResult{}, err
 	}
-
-	jobID, err := s.jobRepo.Create(ctx, sourceID)
-	if err != nil {
-		return IngestResult{}, err
+	if job == nil {
+		return IngestResult{}, newServiceError(ErrNotFound, "fetch job not found")
+	}
+	if job.SourceID != req.SourceID {
+		return IngestResult{}, newServiceError(ErrValidation, "job source mismatch")
+	}
+	if job.Status != "running" {
+		return IngestResult{}, newServiceError(ErrConflict, "fetch job is already finished")
 	}
 
 	articles := make([]domain.Article, 0, len(req.Articles))
@@ -188,28 +227,98 @@ func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestR
 		})
 	}
 
-	inserted, duplicated, ingestErr := s.articleRepo.BulkUpsert(ctx, sourceID, articles)
+	inserted, duplicated, ingestErr := s.articleRepo.BulkUpsert(ctx, req.SourceID, articles)
 	if ingestErr != nil {
-		errMsg := ingestErr.Error()
-		_ = s.jobRepo.Finish(ctx, jobID, "failed", len(articles), inserted, duplicated, &errMsg)
-		_ = s.sourceRepo.UpdateFetchStatus(ctx, sourceID, "failed", &errMsg)
 		return IngestResult{}, fmt.Errorf("bulk upsert: %w", ingestErr)
 	}
 
-	if err := s.jobRepo.Finish(ctx, jobID, "success", len(articles), inserted, duplicated, nil); err != nil {
-		return IngestResult{}, err
-	}
-	if err := s.sourceRepo.UpdateFetchStatus(ctx, sourceID, "success", nil); err != nil {
-		return IngestResult{}, err
-	}
-
 	return IngestResult{
-		SourceID:        sourceID,
-		JobID:           jobID,
+		SourceID:        req.SourceID,
+		JobID:           req.JobID,
 		FetchedCount:    len(articles),
 		InsertedCount:   inserted,
 		DuplicatedCount: duplicated,
 	}, nil
+}
+
+type StartFetchJobInput struct {
+	Source IngestSourceInput `json:"source"`
+}
+
+type StartFetchJobResult struct {
+	SourceID int64 `json:"source_id"`
+	JobID    int64 `json:"job_id"`
+}
+
+func (s *ArticleService) StartFetchJob(ctx context.Context, input StartFetchJobInput) (StartFetchJobResult, error) {
+	sourceID, err := s.sourceRepo.EnsureSource(ctx, domain.Source{
+		Name:            input.Source.Name,
+		Type:            input.Source.Type,
+		FetchURL:        input.Source.FetchURL,
+		FetchMethod:     input.Source.FetchMethod,
+		IntervalMinutes: input.Source.IntervalMinutes,
+		DefaultCategory: input.Source.DefaultCategory,
+	})
+	if err != nil {
+		return StartFetchJobResult{}, err
+	}
+
+	jobID, err := s.jobRepo.Create(ctx, sourceID)
+	if err != nil {
+		return StartFetchJobResult{}, err
+	}
+
+	return StartFetchJobResult{
+		SourceID: sourceID,
+		JobID:    jobID,
+	}, nil
+}
+
+type FinishFetchJobInput struct {
+	Status          string  `json:"status"`
+	FetchedCount    int     `json:"fetched_count"`
+	InsertedCount   int     `json:"inserted_count"`
+	DuplicatedCount int     `json:"duplicated_count"`
+	ErrorMessage    *string `json:"error_message"`
+}
+
+func (s *ArticleService) FinishFetchJob(ctx context.Context, jobID int64, input FinishFetchJobInput) error {
+	if jobID < 1 {
+		return newServiceError(ErrValidation, "job_id is required")
+	}
+	if input.Status != "success" && input.Status != "failed" {
+		return newServiceError(ErrValidation, "status must be success or failed")
+	}
+	if input.FetchedCount < 0 || input.InsertedCount < 0 || input.DuplicatedCount < 0 {
+		return newServiceError(ErrValidation, "counts must be greater than or equal to 0")
+	}
+
+	job, err := s.jobRepo.GetByID(ctx, jobID)
+	if err != nil {
+		return err
+	}
+	if job == nil {
+		return newServiceError(ErrNotFound, "fetch job not found")
+	}
+	if job.Status != "running" {
+		return newServiceError(ErrConflict, "fetch job is already finished")
+	}
+
+	errorMessage := normalizeOptionalString(input.ErrorMessage)
+	if input.Status == "failed" && errorMessage == nil {
+		return newServiceError(ErrValidation, "error_message is required when status is failed")
+	}
+	if input.Status == "success" {
+		errorMessage = nil
+	}
+
+	if err := s.jobRepo.Finish(ctx, jobID, input.Status, input.FetchedCount, input.InsertedCount, input.DuplicatedCount, errorMessage); err != nil {
+		return err
+	}
+	if err := s.sourceRepo.UpdateFetchStatus(ctx, job.SourceID, input.Status, errorMessage); err != nil {
+		return err
+	}
+	return nil
 }
 
 func sanitizeSourceInput(input SourceInput) (domain.Source, error) {
@@ -277,4 +386,15 @@ func mapSourceError(err error) error {
 
 func newServiceError(kind error, message string) error {
 	return &serviceError{kind: kind, message: message}
+}
+
+func normalizeOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }

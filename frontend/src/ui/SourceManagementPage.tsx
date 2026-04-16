@@ -4,6 +4,7 @@ import { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 import { createSource, fetchSources, Source, SourceInput, updateSource } from "../lib/api";
 
@@ -187,6 +188,12 @@ export function SourceManagementPage() {
                   >
                     Edit Source
                   </button>
+                  <Link
+                    to={`/sources/${source.id}`}
+                    className="ml-4 text-sm font-medium text-amber-300 transition hover:text-amber-100"
+                  >
+                    View History
+                  </Link>
                 </article>
               );
             })}

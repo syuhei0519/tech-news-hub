@@ -91,6 +91,7 @@ docker compose config -q
 - `article-service` の `/internal/ingest` が生きているか
 - dedupe / DB 制約で失敗していないか
 - fetch_jobs と source status が更新されているか
+- UI では `/sources/:id` のジョブ履歴画面で失敗メッセージを確認できるか
 
 ### CSV Export Mismatch
 

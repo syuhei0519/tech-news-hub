@@ -121,3 +121,38 @@ func TestProxyRequestForwardsMethodHeadersAndBody(t *testing.T) {
 		t.Fatalf("unexpected body: %s", body)
 	}
 }
+
+func TestProxyRequestForwardsFetchJobsQuery(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.URL.Path != "/api/v1/fetch-jobs" {
+				t.Fatalf("unexpected path: %s", req.URL.Path)
+			}
+			if got := req.URL.Query().Get("source_id"); got != "7" {
+				t.Fatalf("unexpected source_id: %s", got)
+			}
+			if got := req.URL.Query().Get("status"); got != "failed" {
+				t.Fatalf("unexpected status: %s", got)
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"items":[],"total":0,"page":1,"page_size":20,"total_pages":0}`)),
+			}, nil
+		}),
+	}
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/fetch-jobs?source_id=7&status=failed", nil)
+
+	proxyRequest(c, client, "http://article-service/api/v1/fetch-jobs")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusOK)
+	}
+}

@@ -58,6 +58,7 @@
 `articles.category`
 `articles.dedupe_key`
 `fetch_jobs.source_id`
+`fetch_jobs.source_id + status + started_at`
 `sources.name`
 
 - 過剰に index を貼りすぎない
