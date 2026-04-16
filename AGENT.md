@@ -49,82 +49,22 @@
 └── AGENT.md
 ```
 
-## Current Phase
+## Component-Specific Guidance
 
-現在は Phase 4 の Compose / CI / OpenAPI 整備まで実装済みです。
+トップレベルの `AGENT.md` は共通ルールと導線だけを扱います。
+各実装領域の責務や読み始めるべきファイルは、対象ディレクトリの `AGENT.md` を参照してください。
 
-Phase 1 で完了した範囲:
+- `frontend/AGENT.md`
+- `services/api-gateway/AGENT.md`
+- `services/article-service/AGENT.md`
+- `services/collector-service/AGENT.md`
+- `services/notification-service/AGENT.md`
 
-- article-service
-- collector-service の最小収集フロー
-- api-gateway
-- frontend
-- MySQL 接続
-- 記事一覧 / 詳細 / 検索
+現在の進捗、優先順位、フェーズ情報は次を参照します。
 
-Phase 2 で完了した範囲:
-
-- 既読 / お気に入り
-- ソース管理
-- CSV 出力
-- 取得ジョブ履歴
-
-Phase 3 で完了した範囲:
-
-- notification-service
-- RabbitMQ 連携
-- 新着通知と取得失敗通知
-
-Phase 4 で完了した範囲:
-
-- Docker Compose のローカル運用整備
-- GitHub Actions の最小 CI
-- OpenAPI の公開 API 追従
-
-現在の残課題:
-
-- kind / Helm / Argo CD の整備
-- Proxmox クラスタ移行、永続化、監視拡張
-
-次に優先して進める内容は以下です。
-
-- kind / Helm / Argo CD の整備
-- Proxmox クラスタ移行、永続化、監視拡張
-
-## Service Responsibilities
-
-### frontend
-
-- React + TypeScript + Vite
-- 記事一覧、詳細、検索 UI
-- API Gateway 経由でバックエンドアクセス
-
-### api-gateway
-
-- フロント向け単一入口
-- 将来の JWT 認証導入ポイント
-- 共通ログ、共通エラー制御
-- article-service へのプロキシ
-
-### article-service
-
-- 記事保存
-- 記事一覧 / 詳細 / 検索
-- collector-service からの内部取り込み API
-- ソース / 取得ジョブ履歴の基礎テーブル管理
-
-### collector-service
-
-- RSS 取得
-- 外部データ正規化
-- dedupe_key 生成
-- article-service への投入
-
-### notification-service
-
-- 通知一覧 / 既読更新 API
-- RabbitMQ 経由の新着通知 / 取得失敗通知
-- 後続フェーズで日次 / 週次ダイジェスト、Slack / メール連携を追加
+- `docs/current-status.md`
+- `docs/backlog-priority.md`
+- `docs/phases.md`
 
 ## Local Development
 
@@ -251,12 +191,3 @@ npm run build
 - 重要な利用者向け変更や運用上の変更は `CHANGELOG.md` を更新する
 - エージェント向けの入口説明や恒久ルールが変わった場合は `AGENT.md` や `RULES.md` も更新する
 - ドキュメント更新が不要と判断した場合でも、完了前に更新不要の理由を確認する
-
-## Where To Start Next
-
-次に着手する優先順は以下です。
-
-1. kind / Helm / Argo CD の整備に着手する
-2. Proxmox クラスタ移行、永続化、監視拡張を進める
-3. 認証導入の前提整理を進める
-4. collector の収集戦略拡張を進める
