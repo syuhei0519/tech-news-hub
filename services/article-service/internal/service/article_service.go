@@ -102,6 +102,7 @@ func (s *ArticleService) UpdateReadStatus(ctx context.Context, id int64, input U
 		return nil, newServiceError(ErrValidation, "article id is required")
 	}
 
+	// 初期は記事テーブル内の単純 state 更新で閉じ、ユーザー別の抽象化は持ち込まない。
 	article, err := s.articleRepo.UpdateReadStatus(ctx, id, input.IsRead)
 	if err != nil {
 		return nil, err
@@ -117,6 +118,7 @@ func (s *ArticleService) UpdateFavoriteStatus(ctx context.Context, id int64, inp
 		return nil, newServiceError(ErrValidation, "article id is required")
 	}
 
+	// favorite も article-service の責務内で完結させ、gateway 側に状態判断を持たせない。
 	article, err := s.articleRepo.UpdateFavoriteStatus(ctx, id, input.IsFavorite)
 	if err != nil {
 		return nil, err

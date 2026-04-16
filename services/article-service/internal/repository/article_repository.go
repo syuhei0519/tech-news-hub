@@ -52,6 +52,7 @@ func (r *ArticleRepository) List(ctx context.Context, params domain.ListArticles
 		where = append(where, "a.source_id = ?")
 		args = append(args, params.SourceID)
 	}
+	// 未読のみ・お気に入りのみを独立指定できる前提のため、bool 条件は個別に積み上げる。
 	if params.IsRead != nil {
 		where = append(where, "a.is_read = ?")
 		args = append(args, *params.IsRead)
@@ -143,6 +144,7 @@ func (r *ArticleRepository) UpdateReadStatus(ctx context.Context, id int64, isRe
 		return nil, nil
 	}
 
+	// 更新後の最新行を返して、API レスポンスと一覧再表示の型を揃える。
 	return r.GetByID(ctx, id)
 }
 
@@ -160,6 +162,7 @@ func (r *ArticleRepository) UpdateFavoriteStatus(ctx context.Context, id int64, 
 		return nil, nil
 	}
 
+	// read-status と同じ返却契約に寄せ、frontend が更新後データをそのまま再利用できるようにする。
 	return r.GetByID(ctx, id)
 }
 

@@ -29,6 +29,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 			sourceID, _ := strconv.ParseInt(c.Query("source_id"), 10, 64)
 			page, _ := strconv.Atoi(defaultString(c.Query("page"), "1"))
 			pageSize, _ := strconv.Atoi(defaultString(c.Query("page_size"), "20"))
+			// 未指定と false 指定を区別して repository に渡し、独立フィルタの組み合わせを保つ。
 			isRead, err := parseOptionalBoolQuery(c, "is_read")
 			if err != nil {
 				return
@@ -89,6 +90,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 				return
 			}
 
+			// 状態更新の整合性判断は service に寄せ、handler は入出力変換だけに留める。
 			article, err := articleService.UpdateReadStatus(c.Request.Context(), id, req)
 			if err != nil {
 				writeServiceError(c, err)
@@ -110,6 +112,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 				return
 			}
 
+			// お気に入り更新も read-status と同じ責務分担に揃え、公開 API の扱いを単純化する。
 			article, err := articleService.UpdateFavoriteStatus(c.Request.Context(), id, req)
 			if err != nil {
 				writeServiceError(c, err)
