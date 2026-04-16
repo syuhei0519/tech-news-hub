@@ -122,8 +122,9 @@ Phase 4 で完了した範囲:
 
 ### notification-service
 
-- まだ雛形のみ
-- 後続フェーズで通知条件判定、ダイジェスト、Slack / メール連携を追加
+- 通知一覧 / 既読更新 API
+- RabbitMQ 経由の新着通知 / 取得失敗通知
+- 後続フェーズで日次 / 週次ダイジェスト、Slack / メール連携を追加
 
 ## Local Development
 
@@ -230,6 +231,9 @@ npm run build
 - `.env.example` を最新に保つ
 - `node_modules`, `dist`, `*.tsbuildinfo` はコミットしない
 - ドキュメント更新を伴う設計変更では `docs/` も更新する
+- Git のコミットメッセージは日本語で記述する
+- Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
+- Pull Request 作成時は `.github/pull_request_template.md` を使い、各項目を実施内容に合わせて埋める
 
 ## Documentation Update Rules
 
