@@ -79,6 +79,8 @@ export type ListFetchJobsResponse = {
 export async function fetchArticles(params: {
   q?: string;
   category?: string;
+  is_read?: boolean;
+  is_favorite?: boolean;
   page?: number;
 }) {
   const response = await api.get<ListArticlesResponse>("/api/v1/articles", { params });
@@ -87,6 +89,16 @@ export async function fetchArticles(params: {
 
 export async function fetchArticle(id: string) {
   const response = await api.get<Article>(`/api/v1/articles/${id}`);
+  return response.data;
+}
+
+export async function updateArticleReadStatus(id: number, isRead: boolean) {
+  const response = await api.patch<Article>(`/api/v1/articles/${id}/read-status`, { is_read: isRead });
+  return response.data;
+}
+
+export async function updateArticleFavoriteStatus(id: number, isFavorite: boolean) {
+  const response = await api.patch<Article>(`/api/v1/articles/${id}/favorite-status`, { is_favorite: isFavorite });
   return response.data;
 }
 

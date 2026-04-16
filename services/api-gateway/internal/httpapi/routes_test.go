@@ -28,6 +28,12 @@ func TestProxyRequestForwardsQueryAndBody(t *testing.T) {
 			if got := req.URL.Query().Get("q"); got != "kubernetes" {
 				t.Fatalf("unexpected query: %s", got)
 			}
+			if got := req.URL.Query().Get("is_read"); got != "false" {
+				t.Fatalf("unexpected is_read: %s", got)
+			}
+			if got := req.URL.Query().Get("is_favorite"); got != "true" {
+				t.Fatalf("unexpected is_favorite: %s", got)
+			}
 
 			return &http.Response{
 				StatusCode: http.StatusOK,
@@ -39,7 +45,7 @@ func TestProxyRequestForwardsQueryAndBody(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/articles?q=kubernetes", nil)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/articles?q=kubernetes&is_read=false&is_favorite=true", nil)
 
 	proxyRequest(c, client, "http://article-service/api/v1/articles")
 
@@ -84,7 +90,7 @@ func TestProxyRequestForwardsMethodHeadersAndBody(t *testing.T) {
 			if req.Method != http.MethodPatch {
 				t.Fatalf("unexpected method: %s", req.Method)
 			}
-			if req.URL.Path != "/api/v1/sources/12" {
+			if req.URL.Path != "/api/v1/articles/12/favorite-status" {
 				t.Fatalf("unexpected path: %s", req.URL.Path)
 			}
 			if got := req.Header.Get("Content-Type"); got != "application/json" {
@@ -95,7 +101,7 @@ func TestProxyRequestForwardsMethodHeadersAndBody(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read body: %v", err)
 			}
-			if string(body) != `{"is_enabled":false}` {
+			if string(body) != `{"is_favorite":true}` {
 				t.Fatalf("unexpected body: %s", string(body))
 			}
 
@@ -109,10 +115,10 @@ func TestProxyRequestForwardsMethodHeadersAndBody(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/sources/12", strings.NewReader(`{"is_enabled":false}`))
+	c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/12/favorite-status", strings.NewReader(`{"is_favorite":true}`))
 	c.Request.Header.Set("Content-Type", "application/json")
 
-	proxyRequest(c, client, "http://article-service/api/v1/sources/12")
+	proxyRequest(c, client, "http://article-service/api/v1/articles/12/favorite-status")
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusOK)

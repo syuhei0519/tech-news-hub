@@ -25,6 +25,14 @@ func RegisterRoutes(router *gin.Engine, articleServiceURL string) {
 			targetURL := articleServiceURL + "/api/v1/articles/" + c.Param("id")
 			proxyRequest(c, client, targetURL)
 		})
+		v1.PATCH("/articles/:id/read-status", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/articles/" + c.Param("id") + "/read-status"
+			proxyRequest(c, client, targetURL)
+		})
+		v1.PATCH("/articles/:id/favorite-status", func(c *gin.Context) {
+			targetURL := articleServiceURL + "/api/v1/articles/" + c.Param("id") + "/favorite-status"
+			proxyRequest(c, client, targetURL)
+		})
 		v1.GET("/sources", func(c *gin.Context) {
 			targetURL := articleServiceURL + "/api/v1/sources"
 			proxyRequest(c, client, targetURL)

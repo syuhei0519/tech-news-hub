@@ -10,14 +10,38 @@ import (
 )
 
 type stubArticleRepo struct {
-	bulkUpsertFunc func(ctx context.Context, sourceID int64, articles []domain.Article) (int, int, error)
+	listFunc                 func(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
+	getByIDFunc              func(ctx context.Context, id int64) (*domain.Article, error)
+	updateReadStatusFunc     func(ctx context.Context, id int64, isRead bool) (*domain.Article, error)
+	updateFavoriteStatusFunc func(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error)
+	bulkUpsertFunc           func(ctx context.Context, sourceID int64, articles []domain.Article) (int, int, error)
 }
 
-func (r *stubArticleRepo) List(context.Context, domain.ListArticlesParams) (domain.ListArticlesResult, error) {
+func (r *stubArticleRepo) List(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error) {
+	if r.listFunc != nil {
+		return r.listFunc(ctx, params)
+	}
 	return domain.ListArticlesResult{}, nil
 }
 
-func (r *stubArticleRepo) GetByID(context.Context, int64) (*domain.Article, error) {
+func (r *stubArticleRepo) GetByID(ctx context.Context, id int64) (*domain.Article, error) {
+	if r.getByIDFunc != nil {
+		return r.getByIDFunc(ctx, id)
+	}
+	return nil, nil
+}
+
+func (r *stubArticleRepo) UpdateReadStatus(ctx context.Context, id int64, isRead bool) (*domain.Article, error) {
+	if r.updateReadStatusFunc != nil {
+		return r.updateReadStatusFunc(ctx, id, isRead)
+	}
+	return nil, nil
+}
+
+func (r *stubArticleRepo) UpdateFavoriteStatus(ctx context.Context, id int64, isFavorite bool) (*domain.Article, error) {
+	if r.updateFavoriteStatusFunc != nil {
+		return r.updateFavoriteStatusFunc(ctx, id, isFavorite)
+	}
 	return nil, nil
 }
 
@@ -247,5 +271,110 @@ func TestListFetchJobsRequiresSourceID(t *testing.T) {
 	_, err := service.ListFetchJobs(context.Background(), domain.ListFetchJobsParams{})
 	if !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestListArticlesPassesReadAndFavoriteFilters(t *testing.T) {
+	t.Parallel()
+
+	isRead := false
+	isFavorite := true
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			listFunc: func(_ context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error) {
+				if params.IsRead == nil || *params.IsRead != isRead {
+					t.Fatalf("unexpected is_read: %#v", params.IsRead)
+				}
+				if params.IsFavorite == nil || *params.IsFavorite != isFavorite {
+					t.Fatalf("unexpected is_favorite: %#v", params.IsFavorite)
+				}
+				return domain.ListArticlesResult{}, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.ListArticles(context.Background(), domain.ListArticlesParams{
+		IsRead:     &isRead,
+		IsFavorite: &isFavorite,
+	})
+	if err != nil {
+		t.Fatalf("ListArticles returned error: %v", err)
+	}
+}
+
+func TestUpdateReadStatusReturnsUpdatedArticle(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			updateReadStatusFunc: func(_ context.Context, id int64, isRead bool) (*domain.Article, error) {
+				if id != 7 || !isRead {
+					t.Fatalf("unexpected args: id=%d isRead=%t", id, isRead)
+				}
+				return &domain.Article{ID: id, IsRead: isRead}, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	article, err := service.UpdateReadStatus(context.Background(), 7, UpdateReadStatusInput{IsRead: true})
+	if err != nil {
+		t.Fatalf("UpdateReadStatus returned error: %v", err)
+	}
+	if article == nil || article.ID != 7 || !article.IsRead {
+		t.Fatalf("unexpected article: %+v", article)
+	}
+}
+
+func TestUpdateFavoriteStatusReturnsNotFoundWhenArticleMissing(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			updateFavoriteStatusFunc: func(context.Context, int64, bool) (*domain.Article, error) {
+				return nil, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.UpdateFavoriteStatus(context.Background(), 8, UpdateFavoriteStatusInput{IsFavorite: true})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected ErrNotFound, got: %v", err)
 	}
 }
