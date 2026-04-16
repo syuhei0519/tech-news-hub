@@ -8,7 +8,19 @@ import (
 	"time"
 
 	"tech-feed-hub/article-service/internal/domain"
+	"tech-feed-hub/article-service/internal/events"
 )
+
+type stubPublisher struct {
+	publishArticleIngestedFunc func(context.Context, events.ArticleIngestedPayload) error
+}
+
+func (p *stubPublisher) PublishArticleIngested(ctx context.Context, payload events.ArticleIngestedPayload) error {
+	if p.publishArticleIngestedFunc != nil {
+		return p.publishArticleIngestedFunc(ctx, payload)
+	}
+	return nil
+}
 
 type stubArticleRepo struct {
 	listFunc                 func(ctx context.Context, params domain.ListArticlesParams) (domain.ListArticlesResult, error)
@@ -255,6 +267,109 @@ func TestIngestRejectsFinishedJob(t *testing.T) {
 	})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict, got: %v", err)
+	}
+}
+
+func TestIngestPublishesEventWhenNewArticlesAreInserted(t *testing.T) {
+	t.Parallel()
+
+	var published bool
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			bulkUpsertFunc: func(context.Context, int64, []domain.Article) (int, int, error) {
+				return 2, 0, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc: func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) {
+				return &domain.FetchJob{ID: 10, SourceID: 3, Status: "running"}, nil
+			},
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+		publisher: &stubPublisher{
+			publishArticleIngestedFunc: func(_ context.Context, payload events.ArticleIngestedPayload) error {
+				published = true
+				if payload.JobID != 10 || payload.SourceID != 3 || payload.SourceName != "Kubernetes Blog" || payload.InsertedCount != 2 {
+					t.Fatalf("unexpected payload: %+v", payload)
+				}
+				if payload.RepresentativeTitle == nil || *payload.RepresentativeTitle != "First" {
+					t.Fatalf("unexpected representative title: %+v", payload)
+				}
+				return nil
+			},
+		},
+	}
+
+	_, err := service.Ingest(context.Background(), IngestRequest{
+		JobID:    10,
+		SourceID: 3,
+		Source: IngestSourceInput{
+			Name:            "Kubernetes Blog",
+			DefaultCategory: "k8s",
+		},
+		Articles: []IngestArticleInput{
+			{Title: "First", URL: "https://example.com/1", FetchedAt: time.Now().UTC(), DedupeKey: "dedupe-1"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Ingest returned error: %v", err)
+	}
+	if !published {
+		t.Fatal("expected article.ingested event to be published")
+	}
+}
+
+func TestIngestIgnoresPublisherFailure(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			bulkUpsertFunc: func(context.Context, int64, []domain.Article) (int, int, error) {
+				return 1, 0, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc: func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) {
+				return &domain.FetchJob{ID: 10, SourceID: 3, Status: "running"}, nil
+			},
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+		publisher: &stubPublisher{
+			publishArticleIngestedFunc: func(context.Context, events.ArticleIngestedPayload) error {
+				return errors.New("broker down")
+			},
+		},
+	}
+
+	_, err := service.Ingest(context.Background(), IngestRequest{
+		JobID:    10,
+		SourceID: 3,
+		Source: IngestSourceInput{
+			Name:            "Kubernetes Blog",
+			DefaultCategory: "k8s",
+		},
+		Articles: []IngestArticleInput{
+			{Title: "First", URL: "https://example.com/1", FetchedAt: time.Now().UTC(), DedupeKey: "dedupe-1"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("expected publish failure to be ignored, got: %v", err)
 	}
 }
 

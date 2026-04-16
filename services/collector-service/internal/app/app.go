@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"tech-feed-hub/collector-service/internal/collector"
+	"tech-feed-hub/collector-service/internal/events"
 	"tech-feed-hub/collector-service/internal/httpapi"
 )
 
@@ -30,8 +32,22 @@ func Run() error {
 		return fmt.Errorf("parse COLLECTOR_SOURCES_JSON: %w", err)
 	}
 
+	service := collector.NewService(articleServiceURL, sources)
+	if amqpURL := os.Getenv("AMQP_URL"); amqpURL != "" {
+		publisher, err := events.NewRabbitMQPublisher(amqpURL, getenv("AMQP_EXCHANGE", "tech-feed.events"))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := publisher.Close(); closeErr != nil {
+				log.Printf("close collector-service publisher: %v", closeErr)
+			}
+		}()
+		service.SetEventPublisher(publisher)
+	}
+
 	router := gin.Default()
-	httpapi.RegisterRoutes(router, collector.NewService(articleServiceURL, sources))
+	httpapi.RegisterRoutes(router, service)
 
 	server := &http.Server{
 		Addr:              ":" + port,

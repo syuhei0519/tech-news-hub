@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	"tech-feed-hub/article-service/internal/events"
 	"tech-feed-hub/article-service/internal/httpapi"
 	"tech-feed-hub/article-service/internal/repository"
 	"tech-feed-hub/article-service/internal/service"
@@ -39,6 +40,20 @@ func Run() error {
 	sourceRepo := repository.NewSourceRepository(db)
 	jobRepo := repository.NewFetchJobRepository(db)
 	articleService := service.NewArticleService(articleRepo, sourceRepo, jobRepo)
+
+	if amqpURL := os.Getenv("AMQP_URL"); amqpURL != "" {
+		publisher, err := events.NewRabbitMQPublisher(amqpURL, getenv("AMQP_EXCHANGE", "tech-feed.events"))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := publisher.Close(); closeErr != nil {
+				log.Printf("close article-service publisher: %v", closeErr)
+			}
+		}()
+		articleService.SetNotificationPublisher(publisher)
+	}
+
 	router := httpapi.NewRouter(db, articleService)
 
 	server := &http.Server{

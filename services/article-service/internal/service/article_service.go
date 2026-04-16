@@ -6,11 +6,13 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
 
 	"tech-feed-hub/article-service/internal/domain"
+	"tech-feed-hub/article-service/internal/events"
 	"tech-feed-hub/article-service/internal/repository"
 )
 
@@ -37,6 +39,7 @@ type ArticleService struct {
 	articleRepo articleRepository
 	sourceRepo  sourceRepository
 	jobRepo     fetchJobRepository
+	publisher   events.NotificationPublisher
 }
 
 type articleRepository interface {
@@ -70,7 +73,16 @@ func NewArticleService(articleRepo *repository.ArticleRepository, sourceRepo *re
 		articleRepo: articleRepo,
 		sourceRepo:  sourceRepo,
 		jobRepo:     jobRepo,
+		publisher:   events.NopPublisher{},
 	}
+}
+
+func (s *ArticleService) SetNotificationPublisher(publisher events.NotificationPublisher) {
+	if publisher == nil {
+		s.publisher = events.NopPublisher{}
+		return
+	}
+	s.publisher = publisher
 }
 
 func (s *ArticleService) ListFetchJobs(ctx context.Context, params domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
@@ -332,13 +344,36 @@ func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestR
 		return IngestResult{}, fmt.Errorf("bulk upsert: %w", ingestErr)
 	}
 
-	return IngestResult{
+	result := IngestResult{
 		SourceID:        req.SourceID,
 		JobID:           req.JobID,
 		FetchedCount:    len(articles),
 		InsertedCount:   inserted,
 		DuplicatedCount: duplicated,
-	}, nil
+	}
+
+	if inserted > 0 {
+		var representativeTitle *string
+		for _, article := range articles {
+			if strings.TrimSpace(article.Title) == "" {
+				continue
+			}
+			title := article.Title
+			representativeTitle = &title
+			break
+		}
+		if err := s.publisher.PublishArticleIngested(ctx, events.ArticleIngestedPayload{
+			JobID:               req.JobID,
+			SourceID:            req.SourceID,
+			SourceName:          req.Source.Name,
+			InsertedCount:       inserted,
+			RepresentativeTitle: representativeTitle,
+		}); err != nil {
+			log.Printf("publish article.ingested event: %v", err)
+		}
+	}
+
+	return result, nil
 }
 
 type StartFetchJobInput struct {
