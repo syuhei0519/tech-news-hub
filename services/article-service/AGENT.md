@@ -1,25 +1,25 @@
 # AGENT.md
 
-## Responsibility
+## Read When
 
-`article-service` は記事管理の中核サービスです。
+- 記事、ソース、fetch job の振る舞いを変えるとき
+- ingest、検索、CSV 前提データ、永続化条件を変えるとき
 
-- 記事一覧、詳細、検索を提供する
-- collector からの内部取り込みを受け付ける
-- ソース情報と取得ジョブ履歴の基礎データを管理する
+## Open First
 
-## Read First
+- `internal/httpapi/router.go`
+- `internal/service/article_service.go`
+- `internal/repository/`
+- `internal/domain/models.go`
+- `internal/events/publisher.go`
 
-- `cmd/article-service/main.go`: 起動エントリポイント
-- `internal/app/app.go`: DI と初期化
-- `internal/httpapi/router.go`: HTTP ルート
-- `internal/service/article_service.go`: ユースケース
-- `internal/repository/`: 永続化
-- `internal/domain/models.go`: ドメインモデル
-- `internal/events/publisher.go`: イベント発行
+## Usually Skip
 
-## Implementation Notes
+- frontend の見た目
+- notification-service の内部実装
 
-- API 変更は `router.go` と `article_service.go` を対で確認する
-- データ更新を伴う変更は repository と domain の整合を崩さない
-- 収集連携に影響する変更は collector 側の投入仕様も確認する
+ただし ingest 契約変更時は collector、通知イベント変更時は notification も確認します。
+
+## Minimum Verification
+
+- `cd services/article-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...`

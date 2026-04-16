@@ -1,26 +1,25 @@
 # AGENT.md
 
-## Responsibility
+## Read When
 
-`notification-service` は通知の保存、配信契約、既読管理を担います。
+- 通知一覧、既読更新、イベント消費、通知保存を変えるとき
+- 新着通知や取得失敗通知の契約を変えるとき
 
-- 通知一覧と既読更新 API を提供する
-- RabbitMQ 経由の新着通知、取得失敗通知を取り込む
-- 将来のダイジェストや外部通知連携の拡張点になる
+## Open First
 
-## Read First
+- `internal/httpapi/router.go`
+- `internal/service/notification_service.go`
+- `internal/repository/notification_repository.go`
+- `internal/events/consumer.go`
+- `internal/events/contracts.go`
 
-- `cmd/notification-service/main.go`: 起動エントリポイント
-- `internal/app/app.go`: 初期化
-- `internal/httpapi/router.go`: HTTP ルート
-- `internal/service/notification_service.go`: ユースケース
-- `internal/repository/notification_repository.go`: 永続化
-- `internal/events/consumer.go`: イベント消費
-- `internal/events/contracts.go`: イベント契約
-- `internal/domain/models.go`: ドメインモデル
+## Usually Skip
 
-## Implementation Notes
+- frontend の画面実装
+- collector の収集詳細
 
-- 通知 API の変更は `router.go` と `notification_service.go` を対で確認する
-- イベント形式を変える場合は `contracts.go` を起点に producer 側も合わせる
-- 既読更新や一覧取得の変更は repository のクエリ条件まで確認する
+ただしイベント契約変更時は producer 側の service も確認します。
+
+## Minimum Verification
+
+- `cd services/notification-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...`

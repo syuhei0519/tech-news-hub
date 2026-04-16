@@ -2,57 +2,19 @@
 
 ## Purpose
 
-このリポジトリは、DevOps / インフラ / クラウド / SRE / CI/CD 関連の情報を定期収集し、一覧・検索・管理する学習用 Web アプリ `Tech Feed Hub` のモノレポです。
+このファイルは、このリポジトリで作業を始めるときの最短ルータです。
+最初から全ドキュメントを読まず、必要な範囲だけ開く前提で使います。
 
-目的は次の 2 点です。
+## Always Read
 
-- 技術情報を継続的に収集・閲覧できること
-- マイクロサービス、Kubernetes、GitOps、監視運用を段階的に学べること
+作業開始時は、まず次だけ確認します。
 
-生成 AI による要約や自動分類は初期スコープに含めません。
-
-## Source Of Truth
-
-要件の詳細は以下を優先して参照します。
-
-- `RULES.md`
-- `docs/requirements.md`
-- `docs/rules-operations.md`
-- `docs/dod.md`
-- `docs/test-policy.md`
-- `docs/release-migration-policy.md`
-- `docs/branch-strategy.md`
+- `AGENT.md`
 - `docs/current-status.md`
-- `docs/backlog-priority.md`
-- `docs/known-issues.md`
-- `docs/glossary.md`
-- `docs/architecture.md`
-- `docs/phases.md`
+- 対象領域の `AGENT.md`
+- `docs/agent-playbooks.md` の該当セクション
 
-## Repository Layout
-
-```text
-.
-├── frontend
-├── services
-│   ├── api-gateway
-│   ├── article-service
-│   ├── collector-service
-│   └── notification-service
-├── deployments
-│   ├── compose
-│   ├── docker
-│   └── k8s
-├── docs
-├── docker-compose.yml
-├── Makefile
-└── AGENT.md
-```
-
-## Component-Specific Guidance
-
-トップレベルの `AGENT.md` は共通ルールと導線だけを扱います。
-各実装領域の責務や読み始めるべきファイルは、対象ディレクトリの `AGENT.md` を参照してください。
+対象領域:
 
 - `frontend/AGENT.md`
 - `services/api-gateway/AGENT.md`
@@ -60,134 +22,47 @@
 - `services/collector-service/AGENT.md`
 - `services/notification-service/AGENT.md`
 
-現在の進捗、優先順位、フェーズ情報は次を参照します。
+## Read Only If Needed
 
-- `docs/current-status.md`
-- `docs/backlog-priority.md`
-- `docs/phases.md`
+- `RULES.md`: スコープ、責務、全体方針を変えるとき
+- `docs/backlog-priority.md`: 次に着手する Issue を選ぶとき
+- `docs/test-policy.md`: テスト追加判断に迷うとき
+- `docs/runbook.md`: 起動、切り分け、運用手順が必要なとき
+- `docs/branch-strategy.md`: branch、PR、merge の運用確認が必要なとき
+- `docs/api-guidelines.md`: 公開 API を変えるとき
+- `docs/db-guidelines.md`: DB や repository の責務を変えるとき
+- `docs/k8s-guidelines.md`: Helm、Argo CD、Kubernetes を変えるとき
+- `docs/requirements.md`: 要件やフェーズ適合を確認したいとき
 
-## Local Development
+## Quick Router
 
-### Requirements
+- UI 修正、表示崩れ、検索条件変更: `frontend/AGENT.md`
+- 公開 API 追加、gateway ルート変更: `services/api-gateway/AGENT.md`
+- 記事、ソース、fetch job の振る舞い変更: `services/article-service/AGENT.md`
+- 収集、正規化、ingest、dedupe 変更: `services/collector-service/AGENT.md`
+- 通知 API、既読、イベント消費変更: `services/notification-service/AGENT.md`
+- docs-only 変更: `docs/agent-playbooks.md` の `Docs-Only`
 
-- Docker
-- Docker Compose
-- Go 1.24+
-- Node.js 22+
-- npm
+## Non-Negotiables
 
-### First Setup
+- 変更に対応する docs は同じ変更内で更新する
+- PR の題名と本文は、日本語指定がない限り日本語で書く
+- PR 作成時は `.github/pull_request_template.md` を基準に本文を組み立てる
+- 明示的な指示がない限り `main` へ直接 push しない
+- 重要な方針変更は `RULES.md` 側も更新対象として確認する
 
-```bash
-cp .env.example .env
-docker compose config -q
-```
+## Verification Policy
 
-### Start All Services
+- まず対象領域の最小検証を実行する
+- 複数領域にまたがる変更、または最小検証で不安が残る変更では `make verify` を使う
+- docs-only 変更では重い検証を省略してよい
 
-```bash
-make up
-```
+## Documentation Router
 
-### Stop
-
-```bash
-make down
-```
-
-volume も含めて初期化したい場合:
-
-```bash
-make reset
-```
-
-## Verification
-
-Go サービス確認:
-
-```bash
-GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
-```
-
-frontend 確認:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-## Implementation Rules
-
-- 過剰設計より、学習しやすさと継続運用しやすさを優先する
-- ただしサービス責務は明確に分離する
-- 初期は共有 MySQL を許容するが、コード上は各サービスが自分の責務データのみを扱う
-- Docker Compose で全体起動できることを優先する
-- kind / 実クラスタへ移しやすいよう、設定は環境変数で切り替える
-- OpenAPI を前提に API を追加する
-- 破壊的変更を入れる場合は、Compose 起動と既存 API の継続性を確認する
-- 処理意図がコードだけでは追いにくい箇所には、明示的な指示がなくても日本語コメントを付ける
-- コメントは要点だけを短く書き、コードの逐語説明ではなく判断理由や前提を残す
-
-## API Design Rules
-
-- 公開 API は基本的に `api-gateway` 配下に置く
-- サービス間通信用エンドポイントは `internal` プレフィックスで分離する
-- 検索、フィルタ、ソート、ページネーションを早い段階で意識する
-- CSV 出力は将来 `api-gateway` 側で制御する
-
-## Data Rules
-
-- 記事重複防止には `dedupe_key` を使う
-- 日時は UTC ベースで保存する
-- タグは初期実装では JSON 配列で保持する
-- DB スキーマ変更時は `deployments/compose/mysql/init` と今後のマイグレーション方針の整合を意識する
-
-## Deployment Direction
-
-- 開発初期は Docker Compose
-- Kubernetes 検証は kind
-- その後 Proxmox 上の実クラスタに移行
-- GitOps は Helm + Argo CD を想定
-
-以下は環境差分が出やすいため分離を意識すること。
-
-- Ingress
-- StorageClass
-- Domain
-- Secret 管理
-
-## Monitoring Direction
-
-初期は最小構成です。
-
-- health check
-- 構造化ログの導入余地
-- 将来的に Prometheus / Grafana / Loki を追加
-
-## GitHub Preparation Notes
-
-- `.env` はコミットしない
-- `.env.example` を最新に保つ
-- `node_modules`, `dist`, `*.tsbuildinfo` はコミットしない
-- ドキュメント更新を伴う設計変更では `docs/` も更新する
-- Git のコミットメッセージは日本語で記述する
-- Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
-- Pull Request 作成時は `.github/pull_request_template.md` を使い、各項目を実施内容に合わせて埋める
-- Pull Request 作成前に `.github/pull_request_template.md` を必ず開いて内容を確認する
-- GitHub API / MCP で Pull Request を作成する場合、テンプレートは自動適用されない前提で扱い、テンプレートを元にした本文を自分で組み立てて渡す
-- Pull Request 作成直後に、題名が日本語であることと、本文がテンプレートの主要項目を満たしていることを確認し、不足があればその場で更新する
-
-## Documentation Update Rules
-
-- エージェントは作業内容に応じて、必要なドキュメント更新を自分で判断して同じ変更内で実施する
-- 実装、設計、手順、現在地、優先順位、既知課題のいずれかが変わった場合、コード変更だけで完了扱いにしない
-- API 変更時は OpenAPI と API 関連 docs を確認し、必要なら更新する
-- DB 変更時は schema / init SQL / migration と DB 関連 docs を確認し、必要なら更新する
-- 手順変更時は `README.md` または `docs/runbook.md` を更新する
-- フェーズ進行、完了状態、次にやることが変わった場合は `docs/current-status.md` を更新する
-- 優先順位が変わった場合は `docs/backlog-priority.md` を更新する
-- 新しい制約や未解決事項が増えた場合は `docs/known-issues.md` を更新する
-- 重要な利用者向け変更や運用上の変更は `CHANGELOG.md` を更新する
-- エージェント向けの入口説明や恒久ルールが変わった場合は `AGENT.md` や `RULES.md` も更新する
-- ドキュメント更新が不要と判断した場合でも、完了前に更新不要の理由を確認する
+- 現在地、完了状況、次優先が変わる: `docs/current-status.md`
+- 優先順位が変わる: `docs/backlog-priority.md`
+- API 契約が変わる: `docs/openapi/api-gateway.yaml` と API 関連 docs
+- DB / schema / migration 方針が変わる: DB 関連 docs
+- 起動や運用手順が変わる: `README.md` または `docs/runbook.md`
+- 恒久ルールが変わる: `RULES.md`
+- エージェントの入口や最小読込導線が変わる: `AGENT.md` または `docs/agent-playbooks.md`

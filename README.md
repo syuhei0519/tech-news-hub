@@ -57,6 +57,7 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 ## Rule Documents
 
 - `AGENT.md`: 開発者向けの入口
+- `docs/agent-playbooks.md`: エージェント向けの最小読込プレイブック
 - `RULES.md`: プロジェクト全体ルール
 - `docs/requirements.md`: 要件整理
 - `docs/rules-operations.md`: ルール運用方法
