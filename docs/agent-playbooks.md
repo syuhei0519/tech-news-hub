@@ -15,6 +15,7 @@
 
 必要になってから開くもの:
 
+- `docs/openapi/api-gateway.summary.md`
 - `RULES.md`
 - 領域別 guideline
 - `docs/runbook.md`
@@ -48,6 +49,7 @@
 
 - `frontend/src/store/searchStore.ts`
 - `services/api-gateway/AGENT.md`
+- `docs/openapi/api-gateway.summary.md`
 - `docs/openapi/api-gateway.yaml`
 
 ### Verification
@@ -60,13 +62,14 @@
 
 - `services/api-gateway/AGENT.md`
 - 対象 upstream service の `AGENT.md`
-- `docs/openapi/api-gateway.yaml`
+- `docs/openapi/api-gateway.summary.md`
 - `docs/api-guidelines.md`
 
 ### Read If Needed
 
 - `frontend/AGENT.md`
 - `RULES.md`
+- `docs/openapi/api-gateway.yaml`
 
 ### Verification
 

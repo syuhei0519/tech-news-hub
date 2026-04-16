@@ -22,6 +22,7 @@
 - `docs/branch-strategy.md`
 - `docs/adr/*`
 - `docs/current-status.md`
+- `docs/openapi/api-gateway.summary.md`
 - `docs/backlog-priority.md`
 - `docs/known-issues.md`
 - `docs/glossary.md`
@@ -60,18 +61,20 @@
 - `AGENT.md`
 - `docs/current-status.md`
 - 対象領域の `AGENT.md`
-- `docs/agent-playbooks.md` の該当セクション
 
 ### Read On Demand
 
 以下は必要になった時だけ開く。
 
+- `docs/agent-playbooks.md`: 作業別の最小読込セットを確認する時
+- `docs/openapi/api-gateway.summary.md`: 公開 API の全体像を素早く確認する時
 - `RULES.md`: スコープ、責務、全体方針を変える時
 - `docs/backlog-priority.md`: 次の Issue を選ぶ時
 - `docs/branch-strategy.md`: branch / PR / merge 運用を確認する時
 - `docs/test-policy.md`: テスト追加判断に迷う時
 - `docs/runbook.md`: 起動、障害切り分け、運用手順が必要な時
 - `docs/api-guidelines.md`: 公開 API を変える時
+- `docs/openapi/api-gateway.yaml`: schema や parameter まで変更する時
 - `docs/db-guidelines.md`: DB、repository、migration を変える時
 - `docs/k8s-guidelines.md`: Kubernetes、Helm、Argo CD を変える時
 - `docs/requirements.md`: 要件適合に不安がある時
@@ -86,7 +89,7 @@
 
 ### When Implementing
 
-- API 変更時は OpenAPI 更新対象か確認する
+- API 変更時は summary で影響範囲を見て、詳細変更時だけ OpenAPI 本体を開く
 - DB 変更時は init SQL / migration / repository 整合を確認する
 - docs 更新対象を同じ変更内で処理する
 - 処理意図が追いにくい箇所には日本語コメントを補う
@@ -200,7 +203,7 @@
 ## Session Continuity
 
 - セッション開始時は `docs/current-status.md` を確認する
-- 作業ごとに `docs/agent-playbooks.md` の該当セクションを使う
+- 作業ごとに必要なら `docs/agent-playbooks.md` の該当セクションを使う
 - 優先順位判断は `docs/backlog-priority.md` を使う
 - 既知制約は `docs/known-issues.md` を確認する
 - 標準検証は `make verify` を使う

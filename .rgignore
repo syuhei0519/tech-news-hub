@@ -1,0 +1,5 @@
+# Default searches should skip generated artifacts and lockfiles.
+frontend/node_modules/**
+frontend/dist/**
+frontend/package-lock.json
+services/**/go.sum

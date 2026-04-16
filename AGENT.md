@@ -12,7 +12,11 @@
 - `AGENT.md`
 - `docs/current-status.md`
 - 対象領域の `AGENT.md`
+
+必要なら追加で確認するもの:
+
 - `docs/agent-playbooks.md` の該当セクション
+- `docs/openapi/api-gateway.summary.md`: 公開 API の全体像だけ先に見たいとき
 
 対象領域:
 
@@ -33,6 +37,7 @@
 - `docs/db-guidelines.md`: DB や repository の責務を変えるとき
 - `docs/k8s-guidelines.md`: Helm、Argo CD、Kubernetes を変えるとき
 - `docs/requirements.md`: 要件やフェーズ適合を確認したいとき
+- `docs/openapi/api-gateway.yaml`: schema や parameter まで変更確認したいとき
 
 ## Quick Router
 
@@ -42,6 +47,7 @@
 - 収集、正規化、ingest、dedupe 変更: `services/collector-service/AGENT.md`
 - 通知 API、既読、イベント消費変更: `services/notification-service/AGENT.md`
 - docs-only 変更: `docs/agent-playbooks.md` の `Docs-Only`
+- endpoint 一覧や影響範囲だけ先に確認したい: `docs/openapi/api-gateway.summary.md`
 
 ## Non-Negotiables
 
@@ -61,7 +67,7 @@
 
 - 現在地、完了状況、次優先が変わる: `docs/current-status.md`
 - 優先順位が変わる: `docs/backlog-priority.md`
-- API 契約が変わる: `docs/openapi/api-gateway.yaml` と API 関連 docs
+- API 契約が変わる: まず `docs/openapi/api-gateway.summary.md`、schema 更新時は `docs/openapi/api-gateway.yaml` と API 関連 docs
 - DB / schema / migration 方針が変わる: DB 関連 docs
 - 起動や運用手順が変わる: `README.md` または `docs/runbook.md`
 - 恒久ルールが変わる: `RULES.md`

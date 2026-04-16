@@ -72,6 +72,7 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 - `docs/backlog-priority.md`: 優先順位
 - `docs/known-issues.md`: 既知課題
 - `docs/glossary.md`: 用語集
+- `docs/openapi/api-gateway.summary.md`: 公開 API の要約導線
 - `CHANGELOG.md`: 重要変更履歴
 
 ## Standard Commands
