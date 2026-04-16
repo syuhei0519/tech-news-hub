@@ -1,11 +1,14 @@
 -include .env
 
-.PHONY: up down logs ps build test verify
+.PHONY: up down reset logs ps build test verify
 
 up:
 	docker compose up --build
 
 down:
+	docker compose down
+
+reset:
 	docker compose down -v
 
 logs:

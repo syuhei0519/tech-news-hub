@@ -30,6 +30,11 @@ make up
 make down
 ```
 
+補足:
+
+- `make down` は named volume を削除しない
+- DB を含めて初期化したい場合だけ `make reset` を使う
+
 ### Logs
 
 ```bash
@@ -59,6 +64,12 @@ npm run build
 
 ```bash
 docker compose config -q
+```
+
+### Full Verify
+
+```bash
+make verify
 ```
 
 ## Health Endpoints
