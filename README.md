@@ -15,7 +15,7 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 
 ## Current Status
 
-Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3 の通知経路、Phase 4 の基盤整備を実装済みです。
+Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3 の通知経路、Phase 4 の基盤整備を実装済みです。次段として、Phase 5 より前に Phase 4.5 のテスト強化を進めます。
 
 - article-service / collector-service / api-gateway / frontend
 - MySQL 接続
@@ -33,6 +33,7 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 現在地:
 
 - Phase 4 の Compose / CI / OpenAPI 整備まで実装済み
+- 次優先は Phase 4.5 のテスト戦略実装と回帰防止基盤の強化
 - collector-service は article-service の source 管理 API から実行時に収集対象を同期
 - 検証状態の詳細は `docs/current-status.md` を参照
 

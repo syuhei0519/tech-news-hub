@@ -198,6 +198,14 @@
 - GitHub Actions
 - OpenAPI 整備
 
+### Phase 4.5
+
+- テスト戦略の実装
+- repository / MySQL 結合テスト
+- frontend component test
+- service 間 contract test
+- 最小 E2E と CI 整備
+
 ### Phase 5
 
 - kind デプロイ
