@@ -51,3 +51,21 @@ CREATE TABLE IF NOT EXISTS fetch_jobs (
   INDEX idx_fetch_jobs_source_status_started (source_id, status, started_at, id),
   CONSTRAINT fk_fetch_jobs_source_id FOREIGN KEY (source_id) REFERENCES sources(id)
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  event_id VARCHAR(64) NOT NULL,
+  event_type VARCHAR(64) NOT NULL,
+  level VARCHAR(32) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  source_id BIGINT NULL,
+  fetch_job_id BIGINT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at DATETIME NULL,
+  UNIQUE KEY uq_notifications_event_id (event_id),
+  INDEX idx_notifications_is_read_created (is_read, created_at, id),
+  CONSTRAINT fk_notifications_source_id FOREIGN KEY (source_id) REFERENCES sources(id),
+  CONSTRAINT fk_notifications_fetch_job_id FOREIGN KEY (fetch_job_id) REFERENCES fetch_jobs(id)
+);
