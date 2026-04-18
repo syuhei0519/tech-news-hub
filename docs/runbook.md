@@ -78,6 +78,19 @@ cd services/collector-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go
 cd services/notification-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
 ```
 
+### article-service MySQL Integration Test
+
+```bash
+docker compose up -d mysql
+ARTICLE_SERVICE_TEST_MYSQL_DSN='app_user:app_password@tcp(127.0.0.1:3306)/tech_feed_hub?parseTime=true&multiStatements=true' make test-article-integration
+```
+
+補足:
+
+- integration test は `ARTICLE_SERVICE_RUN_INTEGRATION=1` が付いたときだけ実行される
+- `ARTICLE_SERVICE_TEST_MYSQL_DSN` を省略した場合は `127.0.0.1:3306` のローカル MySQL を既定で参照する
+- schema は `deployments/compose/mysql/init/001_schema.sql` をそのまま適用する
+
 ### Frontend
 
 ```bash

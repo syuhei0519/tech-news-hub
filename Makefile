@@ -3,7 +3,7 @@
 COMPOSE := docker compose
 DEV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
-.PHONY: up down reset logs ps dev-up dev-down dev-logs dev-ps dev-config build test verify
+.PHONY: up down reset logs ps dev-up dev-down dev-logs dev-ps dev-config build test test-article-integration verify
 
 up:
 	$(COMPOSE) up --build
@@ -43,6 +43,9 @@ test:
 	cd services/api-gateway && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
 	cd services/collector-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
 	cd services/notification-service && GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
+
+test-article-integration:
+	cd services/article-service && ARTICLE_SERVICE_RUN_INTEGRATION=1 GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
 
 verify: test build
 	$(COMPOSE) config -q
