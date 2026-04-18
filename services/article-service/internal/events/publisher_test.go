@@ -12,6 +12,7 @@ import (
 func TestMarshalArticleIngestedEventMatchesContractFixture(t *testing.T) {
 	t.Parallel()
 
+	// article.ingested の envelope と payload を fixture で固定し、producer 側の静かな変更を検知する。
 	title := "Example Article"
 	body, err := marshalArticleIngestedEvent(
 		"evt-article-ingested-1",

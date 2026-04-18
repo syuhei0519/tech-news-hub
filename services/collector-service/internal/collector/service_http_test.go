@@ -142,6 +142,7 @@ func TestRunReturnsErrorWhenSourceSyncFails(t *testing.T) {
 func TestRunReturnsErrorWhenSourceSyncContainsInvalidSource(t *testing.T) {
 	t.Parallel()
 
+	// source の真実源は article-service 側なので、collector では不正な同期結果を即座に弾く。
 	tests := []struct {
 		name    string
 		body    string

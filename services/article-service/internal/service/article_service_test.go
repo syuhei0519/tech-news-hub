@@ -320,6 +320,7 @@ func TestIngestRejectsFinishedJob(t *testing.T) {
 func TestIngestRejectsInvalidArticles(t *testing.T) {
 	t.Parallel()
 
+	// collector からの ingest 契約を API だけでなく service 層でも守り、部分欠損 payload を登録前に止める。
 	service := &ArticleService{
 		articleRepo: &stubArticleRepo{
 			bulkUpsertFunc: func(context.Context, int64, []domain.Article) (int, int, error) {
@@ -554,6 +555,7 @@ func TestListFetchJobsRequiresSourceID(t *testing.T) {
 func TestStartFetchJobRequiresSourceNameOrID(t *testing.T) {
 	t.Parallel()
 
+	// 古い caller 互換を残しつつも、source 解決に必要な最小入力が無い request は受け付けない。
 	service := &ArticleService{
 		articleRepo: &stubArticleRepo{},
 		sourceRepo: &stubSourceRepo{
@@ -579,6 +581,7 @@ func TestStartFetchJobRequiresSourceNameOrID(t *testing.T) {
 func TestStartFetchJobRequiresDefaultCategoryWhenSourceIDOmitted(t *testing.T) {
 	t.Parallel()
 
+	// source_id なし経路では article-service 側で source を解決するため、default_category も必須にする。
 	service := &ArticleService{
 		articleRepo: &stubArticleRepo{},
 		sourceRepo: &stubSourceRepo{
@@ -609,6 +612,7 @@ func TestStartFetchJobRequiresDefaultCategoryWhenSourceIDOmitted(t *testing.T) {
 func TestFinishFetchJobRequiresErrorMessageWhenFailed(t *testing.T) {
 	t.Parallel()
 
+	// failed job は source 一覧や通知に理由を出す前提なので、空の error_message では完了させない。
 	service := &ArticleService{
 		articleRepo: &stubArticleRepo{},
 		sourceRepo: &stubSourceRepo{

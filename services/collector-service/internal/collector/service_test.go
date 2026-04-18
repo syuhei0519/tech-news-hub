@@ -9,6 +9,7 @@ import (
 func TestParsePubDate(t *testing.T) {
 	t.Parallel()
 
+	// 外部 RSS の日時形式揺れで collector が静かに壊れないよう、受ける形式と落とす形式を固定する。
 	tests := []struct {
 		name    string
 		raw     string
@@ -87,6 +88,7 @@ func TestStripHTMLNormalizesText(t *testing.T) {
 func TestNormalizeRSSItem(t *testing.T) {
 	t.Parallel()
 
+	// collector で trim / HTML 除去 / category 補完 / UTC 化まで済ませる前提をここで固定する。
 	fetchedAt := time.Date(2026, 4, 18, 1, 2, 3, 0, time.FixedZone("JST", 9*60*60))
 	source := SourceConfig{DefaultCategory: "cloud"}
 
@@ -125,6 +127,7 @@ func TestNormalizeRSSItem(t *testing.T) {
 func TestNormalizeRSSItemSkipsMissingRequiredFields(t *testing.T) {
 	t.Parallel()
 
+	// downstream に不完全な記事を流さないため、title か URL が欠けた item は collector で落とす。
 	for _, item := range []rssItem{
 		{Title: "only title"},
 		{Link: "https://example.com/articles/1"},
@@ -138,6 +141,7 @@ func TestNormalizeRSSItemSkipsMissingRequiredFields(t *testing.T) {
 func TestNormalizeRSSItemAllowsMissingPubDate(t *testing.T) {
 	t.Parallel()
 
+	// pubDate 欠損は外部 RSS で起こり得るため、記事自体は捨てず published_at だけ nil にする。
 	article, ok := normalizeRSSItem(rssItem{
 		Title:       "hello",
 		Link:        "https://example.com/articles/1",

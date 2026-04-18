@@ -12,6 +12,7 @@ import (
 func TestMarshalFetchFailedEventMatchesContractFixture(t *testing.T) {
 	t.Parallel()
 
+	// consumer 側と別実装でも event shape を崩さないよう、canonical fixture と producer 出力を突き合わせる。
 	body, err := marshalFetchFailedEvent(
 		"evt-fetch-failed-1",
 		time.Date(2026, 4, 18, 3, 4, 5, 0, time.UTC),

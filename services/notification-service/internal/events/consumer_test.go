@@ -34,6 +34,7 @@ func (h *stubHandler) HandleCollectorFetchFailed(ctx context.Context, event Enve
 func TestHandleDeliveryDispatchesArticleIngestedFixture(t *testing.T) {
 	t.Parallel()
 
+	// producer 側 fixture をそのまま読めることを確認し、event 契約の片側変更を consumer テストで拾う。
 	var handled bool
 	consumer := &Consumer{
 		handler: &stubHandler{
@@ -61,6 +62,7 @@ func TestHandleDeliveryDispatchesArticleIngestedFixture(t *testing.T) {
 func TestHandleDeliveryDispatchesCollectorFetchFailedFixture(t *testing.T) {
 	t.Parallel()
 
+	// collector.fetch.failed も同じ fixture 基準で decode し、routing key ごとの dispatch を固定する。
 	var handled bool
 	consumer := &Consumer{
 		handler: &stubHandler{
@@ -88,6 +90,7 @@ func TestHandleDeliveryDispatchesCollectorFetchFailedFixture(t *testing.T) {
 func TestHandleDeliveryIgnoresUnknownEventType(t *testing.T) {
 	t.Parallel()
 
+	// 未対応 event を poison message にしないよう、unknown type は ignore する現在方針を固定する。
 	consumer := &Consumer{handler: &stubHandler{}}
 	body := []byte(`{"event_type":"unknown.event","payload":{"value":1}}`)
 	if err := consumer.handleDelivery(context.Background(), amqp.Delivery{RoutingKey: "unknown.event", Body: body}); err != nil {
@@ -98,6 +101,7 @@ func TestHandleDeliveryIgnoresUnknownEventType(t *testing.T) {
 func TestHandleDeliveryReturnsDecodeErrorForMalformedJSON(t *testing.T) {
 	t.Parallel()
 
+	// 壊れた JSON は retry 可能な失敗として返し、呼び出し側の Nack(requeue) に流せるようにする。
 	consumer := &Consumer{handler: &stubHandler{}}
 	err := consumer.handleDelivery(context.Background(), amqp.Delivery{RoutingKey: EventTypeArticleIngested, Body: []byte(`{"event_type":`)})
 	if err == nil || !strings.Contains(err.Error(), "decode event header") {
@@ -108,6 +112,7 @@ func TestHandleDeliveryReturnsDecodeErrorForMalformedJSON(t *testing.T) {
 func TestHandleDeliveryReturnsDecodeErrorForInvalidPayloadShape(t *testing.T) {
 	t.Parallel()
 
+	// header だけ読めても payload shape が崩れていれば処理しないことを契約テストで押さえる。
 	consumer := &Consumer{handler: &stubHandler{}}
 	body := mustReadFixture(t, "article.ingested.json")
 
@@ -130,6 +135,7 @@ func TestHandleDeliveryReturnsDecodeErrorForInvalidPayloadShape(t *testing.T) {
 func TestHandleDeliveryReturnsHandlerError(t *testing.T) {
 	t.Parallel()
 
+	// decode 後の保存失敗も呼び出し元に返し、Ack して取りこぼさないことを確認する。
 	consumer := &Consumer{
 		handler: &stubHandler{
 			handleCollectorFetchFailedFunc: func(context.Context, Envelope[CollectorFetchFailedPayload]) error {

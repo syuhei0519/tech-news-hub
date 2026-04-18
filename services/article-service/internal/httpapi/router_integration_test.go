@@ -237,6 +237,7 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 }
 
 func TestRouterInternalEndpointsValidateContract(t *testing.T) {
+	// collector が叩く internal API の 400 shape を固定し、service 間契約の破壊を router 境界で検知する。
 	db, router := newIntegrationRouter(t)
 
 	sourceID := testutil.InsertSource(t, db, domain.Source{
