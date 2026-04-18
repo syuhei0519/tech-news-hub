@@ -77,6 +77,8 @@
 
 - `main` へ入れる変更は基本的に Pull Request 経由とする
 - PR では Issue と変更内容を対応づける
+- PR に含めるコミット見出しは日本語で記述する
+- `feat:` `fix:` などの種別プレフィックスは英語でもよいが、説明部分は日本語にする
 - PR の題名と本文は、明示的な指示がない限り日本語で記述する
 - PR テンプレートに沿って影響範囲、検証、docs 更新有無を明記する
 - GitHub API / MCP で PR を作る場合も、テンプレートは自動挿入されない前提で本文を手動で埋める
@@ -102,10 +104,11 @@
 1. `main` を最新化する
 2. Issue に対応する branch を切る
 3. 実装する
-4. `make verify` を実行する
-5. Pull Request を作成する
-6. `main` に merge commit で取り込む
-7. マージ済み branch を削除する
+4. `git log origin/main..HEAD --oneline` でコミット見出し規約を確認する
+5. `make verify` を実行する
+6. Pull Request を作成する
+7. `main` に merge commit で取り込む
+8. マージ済み branch を削除する
 
 ## Naming Rules
 

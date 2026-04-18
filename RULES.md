@@ -137,6 +137,7 @@
 - `.env` はコミットしない
 - `.env.example` は常に最新に保つ
 - Git のコミットメッセージは日本語で記述する
+- `feat:` `fix:` `docs:` などの Conventional Commits 形式は利用してよいが、説明部分は日本語にする
 - Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
 - Pull Request 作成時は `.github/pull_request_template.md` を使用し、空欄のまま提出しない
 - Pull Request の検証欄、影響欄、ドキュメント欄は実施内容に合わせて更新する
