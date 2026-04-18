@@ -28,6 +28,7 @@ export function renderWithProviders(ui: ReactElement, options: Options = {}) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
+        {/* 実画面と同じ provider 構成で描画し、router / react-query 依存を各テストで共有する。 */}
         <MemoryRouter initialEntries={[route]}>
           <Routes>
             <Route path={path} element={children} />

@@ -64,6 +64,7 @@ describe("ArticleDetailPage", () => {
       route: "/articles/1",
     });
 
+    // 詳細画面の mutation 成功後、一覧キャッシュも同じ記事状態へ同期されることを確認する。
     queryClient.setQueryData(["articles", "", "", "", false, false, "", ""], {
       items: [article],
       total: 1,

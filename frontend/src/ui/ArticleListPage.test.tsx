@@ -108,6 +108,7 @@ describe("ArticleListPage", () => {
     await user.click(screen.getByLabelText("お気に入りのみ"));
     await user.click(screen.getByRole("button", { name: "Search" }));
 
+    // 一覧 API と CSV export の両方で同じ filter 条件が使われることを守る。
     await waitFor(() => expect(latestQuery).toContain("q=platform"));
     const queryParams = new URLSearchParams(latestQuery);
     expect(queryParams.get("category")).toBe("kubernetes");
