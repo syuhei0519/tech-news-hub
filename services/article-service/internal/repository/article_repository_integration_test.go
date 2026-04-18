@@ -10,6 +10,7 @@ import (
 )
 
 func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
+	// 検索条件、ページング、CSV export、状態更新が MySQL 実体で崩れないことを確認する。
 	db := testutil.OpenMySQLForTest(t)
 	testutil.ResetMySQLTables(t, db)
 
@@ -81,6 +82,8 @@ func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
 	isFavorite := true
 	from := time.Date(2026, 4, 9, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC)
+
+	// 一覧は filter と sort を SQL で解決するため、返却件数と先頭行の両方を見る。
 	listResult, err := repo.List(context.Background(), domain.ListArticlesParams{
 		ArticleFilterParams: domain.ArticleFilterParams{
 			Query:         "Kubernetes",
@@ -104,6 +107,7 @@ func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
 		t.Fatalf("unexpected first item: %+v", got)
 	}
 
+	// CSV export は limit+1 件を読み、service 層が上限超過を判定できる前提を守る。
 	exported, err := repo.Export(context.Background(), domain.ExportArticlesParams{
 		ArticleFilterParams: domain.ArticleFilterParams{
 			SourceID:   sourceAID,
@@ -123,6 +127,7 @@ func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
 		t.Fatalf("unexpected export order: %+v", exported)
 	}
 
+	// 既読・お気に入り更新は更新後の最新行を再取得して返す契約を守る。
 	updatedRead, err := repo.UpdateReadStatus(context.Background(), articleA1ID, true)
 	if err != nil {
 		t.Fatalf("UpdateReadStatus returned error: %v", err)
@@ -139,6 +144,7 @@ func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
 		t.Fatalf("unexpected favorite-status update result: %+v", updatedFavorite)
 	}
 
+	// 更新対象が存在しない場合は not found 相当として nil を返す。
 	missing, err := repo.UpdateFavoriteStatus(context.Background(), 999999, true)
 	if err != nil {
 		t.Fatalf("unexpected missing update error: %v", err)
@@ -149,6 +155,7 @@ func TestArticleRepositoryListExportAndStatusUpdates(t *testing.T) {
 }
 
 func TestArticleRepositoryBulkUpsertCountsInsertedAndDuplicated(t *testing.T) {
+	// dedupe_key の unique 制約を使った insert / duplicate 判定が件数に反映されることを確認する。
 	db := testutil.OpenMySQLForTest(t)
 	testutil.ResetMySQLTables(t, db)
 
@@ -194,6 +201,7 @@ func TestArticleRepositoryBulkUpsertCountsInsertedAndDuplicated(t *testing.T) {
 		t.Fatalf("unexpected initial counts: inserted=%d duplicated=%d", inserted, duplicated)
 	}
 
+	// duplicate 側は件数だけでなく、更新列が実際に反映されることまで見る。
 	inserted, duplicated, err = repo.BulkUpsert(context.Background(), sourceID, []domain.Article{
 		{
 			Title:       "First title updated",

@@ -18,6 +18,7 @@ import (
 )
 
 func TestRouterArticleEndpointsAndCSV(t *testing.T) {
+	// 記事系 endpoint の 400/404/200 と CSV content-type をまとめて確認する。
 	db, router := newIntegrationRouter(t)
 
 	sourceID := testutil.InsertSource(t, db, domain.Source{
@@ -68,6 +69,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("unexpected list response: %+v", listResp)
 	}
 
+	// 詳細と状態更新は未存在 article を 404 にそろえる必要がある。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/999999", nil)
 	router.ServeHTTP(rec, req)
@@ -83,6 +85,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("expected 404 for missing favorite target, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	// CSV endpoint は成功時ヘッダと本文の両方を確認する。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/export.csv?source_id=1", nil)
 	router.ServeHTTP(rec, req)
@@ -96,6 +99,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("unexpected csv body: %s", body)
 	}
 
+	// query parse failure は service まで入る前に 400 を返す。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/export.csv?from=bad", nil)
 	router.ServeHTTP(rec, req)
@@ -105,6 +109,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 }
 
 func TestRouterSourceEndpointsAndServerError(t *testing.T) {
+	// source 系 endpoint の 409 と、repository 障害時の 500 を確認する。
 	db, router := newIntegrationRouter(t)
 
 	sourceID := testutil.InsertSource(t, db, domain.Source{
@@ -135,6 +140,7 @@ func TestRouterSourceEndpointsAndServerError(t *testing.T) {
 		t.Fatalf("expected 409 for duplicate source, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	// 参照中 source の削除失敗も 409 に統一する。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodDelete, "/api/v1/sources/"+int64String(sourceID), nil)
 	router.ServeHTTP(rec, req)
@@ -146,6 +152,7 @@ func TestRouterSourceEndpointsAndServerError(t *testing.T) {
 		t.Fatalf("close db for 500 test: %v", err)
 	}
 
+	// DB 障害は writeServiceError 経由で 500 になる。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/sources", nil)
 	router.ServeHTTP(rec, req)
@@ -155,6 +162,7 @@ func TestRouterSourceEndpointsAndServerError(t *testing.T) {
 }
 
 func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
+	// fetch job 系 endpoint の 400/404/202/204/409 を一通り確認する。
 	db, router := newIntegrationRouter(t)
 
 	sourceID := testutil.InsertSource(t, db, domain.Source{
@@ -174,6 +182,7 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 		t.Fatalf("expected 400 for missing source_id, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	// start は未存在 source を 404 にし、既存 source は 202 で job を返す。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/internal/fetch-jobs/start", strings.NewReader(`{"source_id":999999}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -200,6 +209,7 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 		t.Fatalf("unexpected start response: %+v", startResp)
 	}
 
+	// finish は初回のみ成功し、完了済み job の再完了は conflict になる。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/internal/fetch-jobs/"+int64String(startResp.JobID)+"/finish", bytes.NewBufferString(`{"status":"failed","fetched_count":3,"inserted_count":1,"duplicated_count":2,"error_message":"network error"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -216,6 +226,7 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 		t.Fatalf("expected 409 for finishing completed job, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	// ingest も完了済み job に対しては conflict を返す。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPost, "/internal/ingest", bytes.NewBufferString(`{"job_id":`+int64String(startResp.JobID)+`,"source_id":`+int64String(sourceID)+`,"source":{"name":"Job Source","default_category":"jobs"},"articles":[{"title":"New article","url":"https://example.com/new","fetched_at":"2026-04-16T10:00:00Z","dedupe_key":"new-article"}]}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -228,6 +239,7 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 func newIntegrationRouter(t *testing.T) (*sql.DB, http.Handler) {
 	t.Helper()
 
+	// router test は本番と同じ repository/service 構成を立てて handler 境界を見る。
 	db := testutil.OpenMySQLForTest(t)
 	testutil.ResetMySQLTables(t, db)
 

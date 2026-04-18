@@ -10,6 +10,7 @@ import (
 )
 
 func TestFetchJobRepositoryCreateFinishAndList(t *testing.T) {
+	// fetch job の開始、完了、履歴一覧が source 単位で一貫して扱えることを確認する。
 	db := testutil.OpenMySQLForTest(t)
 	testutil.ResetMySQLTables(t, db)
 
@@ -37,6 +38,7 @@ func TestFetchJobRepositoryCreateFinishAndList(t *testing.T) {
 		t.Fatalf("unexpected created job: %+v", job)
 	}
 
+	// 完了時は counts と error_message を含めて更新され、再取得で確認できる必要がある。
 	errMsg := "collector timeout"
 	if err := repo.Finish(context.Background(), jobID, "failed", 12, 5, 7, &errMsg); err != nil {
 		t.Fatalf("Finish returned error: %v", err)
@@ -50,6 +52,7 @@ func TestFetchJobRepositoryCreateFinishAndList(t *testing.T) {
 		t.Fatalf("unexpected finished job: %+v", finished)
 	}
 
+	// 履歴一覧は started_at 降順が正本なので、新しい job が先頭に来ることを見る。
 	olderStart := time.Date(2026, 4, 10, 9, 0, 0, 0, time.UTC)
 	newerStart := time.Date(2026, 4, 11, 9, 0, 0, 0, time.UTC)
 	testutil.InsertFetchJob(t, db, domain.FetchJob{
