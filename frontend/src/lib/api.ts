@@ -192,7 +192,7 @@ export async function deleteSource(id: number) {
   await api.delete(`/api/v1/sources/${id}`);
 }
 
-function buildArticleQueryParams(params: ArticleQueryParams) {
+export function buildArticleQueryParams(params: ArticleQueryParams) {
   return {
     q: params.q || undefined,
     category: params.category || undefined,
