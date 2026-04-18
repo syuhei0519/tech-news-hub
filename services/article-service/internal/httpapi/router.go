@@ -74,7 +74,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 
 			article, err := articleService.GetArticle(c.Request.Context(), id)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				writeServiceError(c, err)
 				return
 			}
 			if article == nil {
@@ -267,7 +267,7 @@ func NewRouter(db *sql.DB, articleService *service.ArticleService) *gin.Engine {
 			// ingest 単体の失敗は collector が finish API で閉じるため、ここでは記事登録結果だけ返す。
 			result, err := articleService.Ingest(c.Request.Context(), req)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				writeServiceError(c, err)
 				return
 			}
 
