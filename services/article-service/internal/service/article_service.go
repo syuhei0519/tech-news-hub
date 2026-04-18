@@ -298,11 +298,8 @@ type IngestResult struct {
 }
 
 func (s *ArticleService) Ingest(ctx context.Context, req IngestRequest) (IngestResult, error) {
-	if req.JobID < 1 {
-		return IngestResult{}, newServiceError(ErrValidation, "job_id is required")
-	}
-	if req.SourceID < 1 {
-		return IngestResult{}, newServiceError(ErrValidation, "source_id is required")
+	if err := validateIngestRequest(req); err != nil {
+		return IngestResult{}, err
 	}
 
 	// job の作成と完了は collector の前後処理に寄せ、ingest 自体は記事登録だけに責務を絞る。
@@ -387,6 +384,10 @@ type StartFetchJobResult struct {
 }
 
 func (s *ArticleService) StartFetchJob(ctx context.Context, input StartFetchJobInput) (StartFetchJobResult, error) {
+	if err := validateStartFetchJobInput(input); err != nil {
+		return StartFetchJobResult{}, err
+	}
+
 	var sourceID int64
 	if input.SourceID > 0 {
 		// source 一覧 API で解決済みの ID が来た場合は、それを job 作成にそのまま使う。
@@ -474,6 +475,51 @@ func (s *ArticleService) FinishFetchJob(ctx context.Context, jobID int64, input 
 	}
 	if err := s.sourceRepo.UpdateFetchStatus(ctx, job.SourceID, input.Status, errorMessage); err != nil {
 		return err
+	}
+	return nil
+}
+
+func validateStartFetchJobInput(input StartFetchJobInput) error {
+	if input.SourceID > 0 {
+		return nil
+	}
+	if strings.TrimSpace(input.Source.Name) == "" {
+		return newServiceError(ErrValidation, "source_id or source.name is required")
+	}
+	if strings.TrimSpace(input.Source.DefaultCategory) == "" {
+		return newServiceError(ErrValidation, "source.default_category is required when source_id is omitted")
+	}
+	return nil
+}
+
+func validateIngestRequest(req IngestRequest) error {
+	if req.JobID < 1 {
+		return newServiceError(ErrValidation, "job_id is required")
+	}
+	if req.SourceID < 1 {
+		return newServiceError(ErrValidation, "source_id is required")
+	}
+	if strings.TrimSpace(req.Source.Name) == "" {
+		return newServiceError(ErrValidation, "source.name is required")
+	}
+
+	defaultCategory := strings.TrimSpace(req.Source.DefaultCategory)
+	for i, article := range req.Articles {
+		if strings.TrimSpace(article.Title) == "" {
+			return newServiceError(ErrValidation, fmt.Sprintf("articles[%d].title is required", i))
+		}
+		if strings.TrimSpace(article.URL) == "" {
+			return newServiceError(ErrValidation, fmt.Sprintf("articles[%d].url is required", i))
+		}
+		if article.FetchedAt.IsZero() {
+			return newServiceError(ErrValidation, fmt.Sprintf("articles[%d].fetched_at is required", i))
+		}
+		if strings.TrimSpace(article.DedupeKey) == "" {
+			return newServiceError(ErrValidation, fmt.Sprintf("articles[%d].dedupe_key is required", i))
+		}
+		if strings.TrimSpace(article.Category) == "" && defaultCategory == "" {
+			return newServiceError(ErrValidation, fmt.Sprintf("articles[%d].category is required when source.default_category is empty", i))
+		}
 	}
 	return nil
 }

@@ -236,6 +236,59 @@ func TestRouterFetchJobEndpointsAndIngestConflict(t *testing.T) {
 	}
 }
 
+func TestRouterInternalEndpointsValidateContract(t *testing.T) {
+	// collector が叩く internal API の 400 shape を固定し、service 間契約の破壊を router 境界で検知する。
+	db, router := newIntegrationRouter(t)
+
+	sourceID := testutil.InsertSource(t, db, domain.Source{
+		Name:            "Contract Source",
+		Type:            "rss",
+		FetchURL:        "https://example.com/contract.xml",
+		FetchMethod:     "rss",
+		IntervalMinutes: 20,
+		DefaultCategory: "contracts",
+		IsEnabled:       true,
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/internal/fetch-jobs/start", strings.NewReader(`{"source":{"name":"Contract Source"}}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "source.default_category is required") {
+		t.Fatalf("expected 400 for invalid start request, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/internal/fetch-jobs/start", strings.NewReader(`{"source_id":`+int64String(sourceID)+`}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected 202 for start fetch job, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var startResp struct {
+		JobID int64 `json:"job_id"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &startResp); err != nil {
+		t.Fatalf("unmarshal start fetch job response: %v", err)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/internal/ingest", bytes.NewBufferString(`{"job_id":`+int64String(startResp.JobID)+`,"source_id":`+int64String(sourceID)+`,"source":{"name":"Contract Source","default_category":"contracts"},"articles":[{"url":"https://example.com/new","fetched_at":"2026-04-16T10:00:00Z","dedupe_key":"new-article"}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "articles[0].title is required") {
+		t.Fatalf("expected 400 for invalid ingest request, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/internal/fetch-jobs/"+int64String(startResp.JobID)+"/finish", bytes.NewBufferString(`{"status":"failed","fetched_count":1,"inserted_count":0,"duplicated_count":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "error_message is required") {
+		t.Fatalf("expected 400 for invalid finish request, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func newIntegrationRouter(t *testing.T) (*sql.DB, http.Handler) {
 	t.Helper()
 
