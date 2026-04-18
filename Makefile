@@ -3,7 +3,7 @@
 COMPOSE := docker compose
 DEV_COMPOSE := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 
-.PHONY: up down reset logs ps dev-up dev-down dev-logs dev-ps dev-config build test test-article-integration verify
+.PHONY: up down reset logs ps dev-up dev-down dev-logs dev-ps dev-config build test test-article-integration verify e2e-up e2e-seed test-e2e e2e-down
 
 up:
 	$(COMPOSE) up --build
@@ -49,3 +49,16 @@ test-article-integration:
 
 verify: test build
 	$(COMPOSE) config -q
+
+e2e-up:
+	$(COMPOSE) up -d --build mysql rabbitmq article-service notification-service api-gateway frontend
+	./scripts/e2e/wait-for-stack.sh
+
+e2e-seed:
+	./scripts/e2e/seed.sh
+
+test-e2e:
+	cd frontend && npm run test:e2e
+
+e2e-down:
+	$(COMPOSE) down -v

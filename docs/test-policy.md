@@ -58,6 +58,7 @@
 
 - frontend と gateway の主要ユーザーフロー
 - 記事一覧、詳細、検索、CSV
+- 通知一覧、既読更新
 
 優先度:
 
@@ -140,12 +141,19 @@
 - frontend build
 - compose config validation
 
+PR での扱い:
+
+- `verify` は高速レーンとして常時実行し、`make verify` の責務を維持する
+- E2E は `e2e-smoke` として別レーンに分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
+- `main` への push と `workflow_dispatch` では、docs-only を除き `e2e-smoke` も実行する
+
 補足:
 
 - 通常のコード変更では上記を `make verify` で実行する
 - docs-only 変更では、required status check を維持するため `verify` ジョブは成功させる
 - ただし docs-only 変更時は重い `make verify` を省略してよい
 - docs-only 判定条件は workflow 側で管理する
+- `make verify` に E2E は含めず、`make e2e-up` / `make e2e-seed` / `make test-e2e` / `make e2e-down` で責務を分ける
 
 将来的に追加候補:
 
@@ -153,6 +161,19 @@
 - API / event contract test
 - frontend component test
 - kind smoke test
+
+## Minimal E2E Scope
+
+Phase 4.5 で持つ E2E は次の 2 本に限定する。
+
+1. 記事一覧表示 → 検索条件変更 → 詳細遷移 → CSV download
+2. 通知一覧表示 → 既読更新
+
+方針:
+
+- 実行方式は compose ベースとする
+- collector や外部 RSS には依存せず、MySQL に deterministic な seed を投入して再現する
+- flaky 要因になりやすい RabbitMQ 到着待ち、外部 HTTP、現在時刻依存は E2E 導線に含めない
 
 ## Phase 4.5 Priority
 
