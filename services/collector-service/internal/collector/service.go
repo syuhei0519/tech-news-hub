@@ -379,27 +379,35 @@ func (s *Service) fetchRSS(ctx context.Context, source SourceConfig) ([]IngestAr
 	now := time.Now().UTC()
 	articles := make([]IngestArticle, 0, len(feed.Channel.Items))
 	for _, item := range feed.Channel.Items {
-		// source 側の default_category を collector で埋めておき、article-service には正規化済み記事だけを渡す。
-		article := IngestArticle{
-			Title:     strings.TrimSpace(item.Title),
-			URL:       strings.TrimSpace(item.Link),
-			FetchedAt: now,
-			Excerpt:   strings.TrimSpace(stripHTML(item.Description)),
-			Category:  source.DefaultCategory,
-			Tags:      []string{source.DefaultCategory},
-			DedupeKey: dedupeKey(item.Link),
-		}
-		if article.Title == "" || article.URL == "" {
+		article, ok := normalizeRSSItem(item, source, now)
+		if !ok {
 			continue
-		}
-
-		if publishedAt, err := parsePubDate(item.PubDate); err == nil {
-			article.PublishedAt = &publishedAt
 		}
 		articles = append(articles, article)
 	}
 
 	return articles, nil
+}
+
+func normalizeRSSItem(item rssItem, source SourceConfig, fetchedAt time.Time) (IngestArticle, bool) {
+	// source 側の default_category を collector で埋めておき、article-service には正規化済み記事だけを渡す。
+	article := IngestArticle{
+		Title:     strings.TrimSpace(item.Title),
+		URL:       strings.TrimSpace(item.Link),
+		FetchedAt: fetchedAt.UTC(),
+		Excerpt:   strings.TrimSpace(stripHTML(item.Description)),
+		Category:  source.DefaultCategory,
+		Tags:      []string{source.DefaultCategory},
+		DedupeKey: dedupeKey(item.Link),
+	}
+	if article.Title == "" || article.URL == "" {
+		return IngestArticle{}, false
+	}
+
+	if publishedAt, err := parsePubDate(item.PubDate); err == nil {
+		article.PublishedAt = &publishedAt
+	}
+	return article, true
 }
 
 func toIngestSource(source SourceConfig) IngestSource {
@@ -414,6 +422,10 @@ func toIngestSource(source SourceConfig) IngestSource {
 }
 
 func parsePubDate(raw string) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, fmt.Errorf("unsupported pubDate: %s", raw)
+	}
 	for _, layout := range []string{time.RFC1123Z, time.RFC1123, time.RFC3339} {
 		if parsed, err := time.Parse(layout, raw); err == nil {
 			return parsed.UTC(), nil

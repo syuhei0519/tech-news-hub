@@ -1,0 +1,15 @@
+{
+  "event_id": "evt-article-ingested-1",
+  "event_type": "article.ingested",
+  "occurred_at": "2026-04-18T03:04:05Z",
+  "source": {
+    "service": "article-service"
+  },
+  "payload": {
+    "job_id": 42,
+    "source_id": 7,
+    "source_name": "Example Feed",
+    "inserted_count": 3,
+    "representative_title": "Example Article"
+  }
+}

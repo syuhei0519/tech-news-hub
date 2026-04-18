@@ -1,0 +1,248 @@
+openapi: 3.0.3
+info:
+  title: Article Service Internal API
+  version: 0.1.0
+servers:
+  - url: http://article-service:8081
+paths:
+  /internal/fetch-jobs/start:
+    post:
+      summary: Start fetch job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartFetchJobRequest"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartFetchJobResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Source not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /internal/fetch-jobs/{id}/finish:
+    post:
+      summary: Finish fetch job
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinishFetchJobRequest"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Fetch job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Fetch job already finished
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /internal/ingest:
+    post:
+      summary: Ingest normalized articles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Fetch job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Fetch job conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    IngestSource:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - rss
+        fetch_url:
+          type: string
+          format: uri
+        fetch_method:
+          type: string
+          enum:
+            - rss
+        interval_minutes:
+          type: integer
+        default_category:
+          type: string
+      required:
+        - name
+    StartFetchJobRequest:
+      type: object
+      properties:
+        source_id:
+          type: integer
+        source:
+          allOf:
+            - $ref: "#/components/schemas/IngestSource"
+      description: source_id is preferred. When source_id is omitted, source.name and source.default_category are required.
+    StartFetchJobResponse:
+      type: object
+      properties:
+        source_id:
+          type: integer
+        job_id:
+          type: integer
+      required:
+        - source_id
+        - job_id
+    FinishFetchJobRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - failed
+        fetched_count:
+          type: integer
+          minimum: 0
+        inserted_count:
+          type: integer
+          minimum: 0
+        duplicated_count:
+          type: integer
+          minimum: 0
+        error_message:
+          type: string
+          nullable: true
+      required:
+        - status
+        - fetched_count
+        - inserted_count
+        - duplicated_count
+      description: error_message is required when status is failed.
+    IngestArticle:
+      type: object
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        fetched_at:
+          type: string
+          format: date-time
+        excerpt:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        dedupe_key:
+          type: string
+      required:
+        - title
+        - url
+        - fetched_at
+        - dedupe_key
+    IngestRequest:
+      type: object
+      properties:
+        job_id:
+          type: integer
+        source_id:
+          type: integer
+        source:
+          $ref: "#/components/schemas/IngestSource"
+        articles:
+          type: array
+          items:
+            $ref: "#/components/schemas/IngestArticle"
+      required:
+        - job_id
+        - source_id
+        - source
+        - articles
+    IngestResponse:
+      type: object
+      properties:
+        source_id:
+          type: integer
+        job_id:
+          type: integer
+        fetched_count:
+          type: integer
+        inserted_count:
+          type: integer
+        duplicated_count:
+          type: integer
+      required:
+        - source_id
+        - job_id
+        - fetched_count
+        - inserted_count
+        - duplicated_count

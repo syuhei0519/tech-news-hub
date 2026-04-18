@@ -1,0 +1,14 @@
+{
+  "event_id": "evt-fetch-failed-1",
+  "event_type": "collector.fetch.failed",
+  "occurred_at": "2026-04-18T03:04:05Z",
+  "source": {
+    "service": "collector-service"
+  },
+  "payload": {
+    "job_id": 42,
+    "source_id": 7,
+    "source_name": "Example Feed",
+    "error_message": "fetch rss status=502"
+  }
+}

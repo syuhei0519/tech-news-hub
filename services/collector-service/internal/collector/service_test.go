@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -8,22 +9,59 @@ import (
 func TestParsePubDate(t *testing.T) {
 	t.Parallel()
 
-	got, err := parsePubDate("Mon, 02 Jan 2006 15:04:05 +0900")
-	if err != nil {
-		t.Fatalf("parsePubDate returned error: %v", err)
+	// 外部 RSS の日時形式揺れで collector が静かに壊れないよう、受ける形式と落とす形式を固定する。
+	tests := []struct {
+		name    string
+		raw     string
+		want    time.Time
+		wantErr string
+	}{
+		{
+			name: "rfc1123z with timezone",
+			raw:  "Mon, 02 Jan 2006 15:04:05 +0900",
+			want: time.Date(2006, 1, 2, 6, 4, 5, 0, time.UTC),
+		},
+		{
+			name: "rfc1123 utc",
+			raw:  "Mon, 02 Jan 2006 15:04:05 UTC",
+			want: time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC),
+		},
+		{
+			name: "rfc3339",
+			raw:  "2006-01-02T15:04:05-07:00",
+			want: time.Date(2006, 1, 2, 22, 4, 5, 0, time.UTC),
+		},
+		{
+			name:    "empty",
+			raw:     "   ",
+			wantErr: "unsupported pubDate",
+		},
+		{
+			name:    "unsupported layout",
+			raw:     "2026/04/14 12:00:00",
+			wantErr: "unsupported pubDate",
+		},
 	}
 
-	want := time.Date(2006, 1, 2, 6, 4, 5, 0, time.UTC)
-	if !got.Equal(want) {
-		t.Fatalf("unexpected parsed time: got=%s want=%s", got, want)
-	}
-}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-func TestParsePubDateReturnsErrorForUnsupportedLayout(t *testing.T) {
-	t.Parallel()
-
-	if _, err := parsePubDate("2026/04/14 12:00:00"); err == nil {
-		t.Fatal("expected error for unsupported layout")
+			got, err := parsePubDate(tt.raw)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parsePubDate returned error: %v", err)
+			}
+			if !got.Equal(tt.want) {
+				t.Fatalf("unexpected parsed time: got=%s want=%s", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -44,5 +82,79 @@ func TestStripHTMLNormalizesText(t *testing.T) {
 	want := "Hello World A & B"
 	if got != want {
 		t.Fatalf("unexpected stripped text: got=%q want=%q", got, want)
+	}
+}
+
+func TestNormalizeRSSItem(t *testing.T) {
+	t.Parallel()
+
+	// collector で trim / HTML 除去 / category 補完 / UTC 化まで済ませる前提をここで固定する。
+	fetchedAt := time.Date(2026, 4, 18, 1, 2, 3, 0, time.FixedZone("JST", 9*60*60))
+	source := SourceConfig{DefaultCategory: "cloud"}
+
+	article, ok := normalizeRSSItem(rssItem{
+		Title:       "  Launch <b>News</b>  ",
+		Link:        " https://example.com/articles/1 ",
+		Description: "<p>Hello&nbsp;World</p><br />A &amp; B",
+		PubDate:     "Mon, 02 Jan 2006 15:04:05 +0900",
+	}, source, fetchedAt)
+	if !ok {
+		t.Fatal("expected item to be normalized")
+	}
+	if article.Title != "Launch <b>News</b>" {
+		t.Fatalf("unexpected title: %q", article.Title)
+	}
+	if article.URL != "https://example.com/articles/1" {
+		t.Fatalf("unexpected url: %q", article.URL)
+	}
+	if article.Excerpt != "Hello World A & B" {
+		t.Fatalf("unexpected excerpt: %q", article.Excerpt)
+	}
+	if article.Category != "cloud" || len(article.Tags) != 1 || article.Tags[0] != "cloud" {
+		t.Fatalf("unexpected category/tags: %+v", article)
+	}
+	if article.DedupeKey != dedupeKey(" https://example.com/articles/1 ") {
+		t.Fatalf("unexpected dedupe key: %q", article.DedupeKey)
+	}
+	if !article.FetchedAt.Equal(fetchedAt.UTC()) {
+		t.Fatalf("unexpected fetched_at: %s", article.FetchedAt)
+	}
+	if article.PublishedAt == nil || !article.PublishedAt.Equal(time.Date(2006, 1, 2, 6, 4, 5, 0, time.UTC)) {
+		t.Fatalf("unexpected published_at: %+v", article.PublishedAt)
+	}
+}
+
+func TestNormalizeRSSItemSkipsMissingRequiredFields(t *testing.T) {
+	t.Parallel()
+
+	// downstream に不完全な記事を流さないため、title か URL が欠けた item は collector で落とす。
+	for _, item := range []rssItem{
+		{Title: "only title"},
+		{Link: "https://example.com/articles/1"},
+	} {
+		if _, ok := normalizeRSSItem(item, SourceConfig{DefaultCategory: "cloud"}, time.Now().UTC()); ok {
+			t.Fatalf("expected item to be skipped: %+v", item)
+		}
+	}
+}
+
+func TestNormalizeRSSItemAllowsMissingPubDate(t *testing.T) {
+	t.Parallel()
+
+	// pubDate 欠損は外部 RSS で起こり得るため、記事自体は捨てず published_at だけ nil にする。
+	article, ok := normalizeRSSItem(rssItem{
+		Title:       "hello",
+		Link:        "https://example.com/articles/1",
+		Description: "<p>line</p>",
+		PubDate:     "",
+	}, SourceConfig{DefaultCategory: "ops"}, time.Now().UTC())
+	if !ok {
+		t.Fatal("expected item to be normalized")
+	}
+	if article.PublishedAt != nil {
+		t.Fatalf("expected published_at to be nil, got %+v", article.PublishedAt)
+	}
+	if article.Excerpt != "line" {
+		t.Fatalf("unexpected excerpt: %q", article.Excerpt)
 	}
 }
