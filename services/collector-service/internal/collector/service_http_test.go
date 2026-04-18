@@ -139,6 +139,57 @@ func TestRunReturnsErrorWhenSourceSyncFails(t *testing.T) {
 	}
 }
 
+func TestRunReturnsErrorWhenSourceSyncContainsInvalidSource(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		body    string
+		wantErr string
+	}{
+		{
+			name:    "invalid id",
+			body:    `{"items":[{"id":0,"name":"Example","type":"rss","fetch_url":"http://feed-source/rss","fetch_method":"rss","interval_minutes":30,"default_category":"cloud","is_enabled":true}]}`,
+			wantErr: "invalid id",
+		},
+		{
+			name:    "unsupported type",
+			body:    `{"items":[{"id":7,"name":"Example","type":"html","fetch_url":"http://feed-source/rss","fetch_method":"rss","interval_minutes":30,"default_category":"cloud","is_enabled":true}]}`,
+			wantErr: "unsupported type",
+		},
+		{
+			name:    "missing fetch url",
+			body:    `{"items":[{"id":7,"name":"Example","type":"rss","fetch_url":"","fetch_method":"rss","interval_minutes":30,"default_category":"cloud","is_enabled":true}]}`,
+			wantErr: "empty fetch_url",
+		},
+		{
+			name:    "invalid interval",
+			body:    `{"items":[{"id":7,"name":"Example","type":"rss","fetch_url":"http://feed-source/rss","fetch_method":"rss","interval_minutes":0,"default_category":"cloud","is_enabled":true}]}`,
+			wantErr: "invalid interval_minutes",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			service := NewService("http://article-service")
+			service.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Path != "/api/v1/sources" {
+					t.Fatalf("unexpected path: %s", r.URL.Path)
+				}
+				return newJSONResponse(http.StatusOK, tt.body), nil
+			})}
+
+			_, err := service.Run(context.Background())
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestRunFinishesFetchJobOnRSSFailure(t *testing.T) {
 	t.Parallel()
 

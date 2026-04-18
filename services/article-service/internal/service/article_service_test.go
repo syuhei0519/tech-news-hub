@@ -308,11 +308,118 @@ func TestIngestRejectsFinishedJob(t *testing.T) {
 		JobID:    10,
 		SourceID: 3,
 		Source: IngestSourceInput{
+			Name:            "Kubernetes Blog",
 			DefaultCategory: "k8s",
 		},
 	})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict, got: %v", err)
+	}
+}
+
+func TestIngestRejectsInvalidArticles(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{
+			bulkUpsertFunc: func(context.Context, int64, []domain.Article) (int, int, error) {
+				t.Fatal("BulkUpsert should not be called")
+				return 0, 0, nil
+			},
+		},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	tests := []struct {
+		name    string
+		req     IngestRequest
+		wantErr string
+	}{
+		{
+			name: "missing source name",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{DefaultCategory: "k8s"},
+			},
+			wantErr: "source.name is required",
+		},
+		{
+			name: "missing article title",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{Name: "Kubernetes Blog", DefaultCategory: "k8s"},
+				Articles: []IngestArticleInput{{URL: "https://example.com/1", FetchedAt: time.Now().UTC(), DedupeKey: "dedupe-1"}},
+			},
+			wantErr: "articles[0].title is required",
+		},
+		{
+			name: "missing article url",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{Name: "Kubernetes Blog", DefaultCategory: "k8s"},
+				Articles: []IngestArticleInput{{Title: "First", FetchedAt: time.Now().UTC(), DedupeKey: "dedupe-1"}},
+			},
+			wantErr: "articles[0].url is required",
+		},
+		{
+			name: "missing fetched at",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{Name: "Kubernetes Blog", DefaultCategory: "k8s"},
+				Articles: []IngestArticleInput{{Title: "First", URL: "https://example.com/1", DedupeKey: "dedupe-1"}},
+			},
+			wantErr: "articles[0].fetched_at is required",
+		},
+		{
+			name: "missing dedupe key",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{Name: "Kubernetes Blog", DefaultCategory: "k8s"},
+				Articles: []IngestArticleInput{{Title: "First", URL: "https://example.com/1", FetchedAt: time.Now().UTC()}},
+			},
+			wantErr: "articles[0].dedupe_key is required",
+		},
+		{
+			name: "missing category without source default",
+			req: IngestRequest{
+				JobID:    10,
+				SourceID: 3,
+				Source:   IngestSourceInput{Name: "Kubernetes Blog"},
+				Articles: []IngestArticleInput{{Title: "First", URL: "https://example.com/1", FetchedAt: time.Now().UTC(), DedupeKey: "dedupe-1"}},
+			},
+			wantErr: "articles[0].category is required",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := service.Ingest(context.Background(), tt.req)
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
+			}
+			if !errors.Is(err, ErrValidation) {
+				t.Fatalf("expected validation error, got %v", err)
+			}
+		})
 	}
 }
 
@@ -439,6 +546,91 @@ func TestListFetchJobsRequiresSourceID(t *testing.T) {
 	}
 
 	_, err := service.ListFetchJobs(context.Background(), domain.ListFetchJobsParams{})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestStartFetchJobRequiresSourceNameOrID(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.StartFetchJob(context.Background(), StartFetchJobInput{})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestStartFetchJobRequiresDefaultCategoryWhenSourceIDOmitted(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc: func(context.Context, domain.Source) (int64, error) {
+				t.Fatal("EnsureSource should not be called")
+				return 0, nil
+			},
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc:  func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(context.Context, int64) (*domain.FetchJob, error) { return nil, nil },
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error { return nil },
+		},
+	}
+
+	_, err := service.StartFetchJob(context.Background(), StartFetchJobInput{
+		Source: IngestSourceInput{Name: "Kubernetes Blog"},
+	})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestFinishFetchJobRequiresErrorMessageWhenFailed(t *testing.T) {
+	t.Parallel()
+
+	service := &ArticleService{
+		articleRepo: &stubArticleRepo{},
+		sourceRepo: &stubSourceRepo{
+			ensureSourceFunc:      func(context.Context, domain.Source) (int64, error) { return 0, nil },
+			updateFetchStatusFunc: func(context.Context, int64, string, *string) error { return nil },
+		},
+		jobRepo: &stubJobRepo{
+			createFunc: func(context.Context, int64) (int64, error) { return 0, nil },
+			getByIDFunc: func(_ context.Context, id int64) (*domain.FetchJob, error) {
+				return &domain.FetchJob{ID: id, SourceID: 9, Status: "running"}, nil
+			},
+			listFunc: func(context.Context, domain.ListFetchJobsParams) (domain.ListFetchJobsResult, error) {
+				return domain.ListFetchJobsResult{}, nil
+			},
+			finishFunc: func(context.Context, int64, string, int, int, int, *string) error {
+				t.Fatal("Finish should not be called")
+				return nil
+			},
+		},
+	}
+
+	err := service.FinishFetchJob(context.Background(), 21, FinishFetchJobInput{Status: "failed"})
 	if !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected ErrValidation, got: %v", err)
 	}

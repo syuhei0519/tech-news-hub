@@ -37,6 +37,13 @@ type RabbitMQPublisher struct {
 	exchange   string
 }
 
+type eventEnvelope struct {
+	EventID    string            `json:"event_id"`
+	EventType  string            `json:"event_type"`
+	OccurredAt time.Time         `json:"occurred_at"`
+	Source     map[string]string `json:"source"`
+}
+
 func NewRabbitMQPublisher(amqpURL string, exchange string) (*RabbitMQPublisher, error) {
 	connection, err := amqp.Dial(amqpURL)
 	if err != nil {
@@ -73,19 +80,7 @@ func (p *RabbitMQPublisher) Close() error {
 }
 
 func (p *RabbitMQPublisher) PublishArticleIngested(ctx context.Context, payload ArticleIngestedPayload) error {
-	body, err := json.Marshal(struct {
-		EventID    string                 `json:"event_id"`
-		EventType  string                 `json:"event_type"`
-		OccurredAt time.Time              `json:"occurred_at"`
-		Source     map[string]string      `json:"source"`
-		Payload    ArticleIngestedPayload `json:"payload"`
-	}{
-		EventID:    newEventID(),
-		EventType:  EventTypeArticleIngested,
-		OccurredAt: time.Now().UTC(),
-		Source:     map[string]string{"service": "article-service"},
-		Payload:    payload,
-	})
+	body, err := marshalArticleIngestedEvent(newEventID(), time.Now().UTC(), payload)
 	if err != nil {
 		return fmt.Errorf("marshal article event: %w", err)
 	}
@@ -104,4 +99,19 @@ func newEventID() string {
 		return fmt.Sprintf("evt-%d", time.Now().UTC().UnixNano())
 	}
 	return hex.EncodeToString(value)
+}
+
+func marshalArticleIngestedEvent(eventID string, occurredAt time.Time, payload ArticleIngestedPayload) ([]byte, error) {
+	return json.Marshal(struct {
+		eventEnvelope
+		Payload ArticleIngestedPayload `json:"payload"`
+	}{
+		eventEnvelope: eventEnvelope{
+			EventID:    eventID,
+			EventType:  EventTypeArticleIngested,
+			OccurredAt: occurredAt.UTC(),
+			Source:     map[string]string{"service": "article-service"},
+		},
+		Payload: payload,
+	})
 }
