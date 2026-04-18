@@ -21,6 +21,10 @@
 - `docs/runbook.md`
 - `docs/test-policy.md`
 
+補足:
+
+- コミット前に `git log origin/main..HEAD --oneline` を確認し、コミット見出しが日本語ルールに沿っていることを確認する
+
 ## Docs-Only
 
 ### Read
