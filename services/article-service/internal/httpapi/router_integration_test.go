@@ -69,7 +69,34 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("unexpected list response: %+v", listResp)
 	}
 
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles?source_id="+int64String(sourceID)+"&category=k8s&is_read=false&sort=published_at&order=asc&page=1&page_size=1", nil)
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for filtered article list, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &listResp); err != nil {
+		t.Fatalf("unmarshal filtered article list: %v", err)
+	}
+	if listResp.Total != 1 || len(listResp.Items) != 1 || listResp.Items[0].ID != articleID {
+		t.Fatalf("unexpected filtered list response: %+v", listResp)
+	}
+
 	// 詳細と状態更新は未存在 article を 404 にそろえる必要がある。
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/"+int64String(articleID), nil)
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for article detail, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var detail domain.Article
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("unmarshal article detail: %v", err)
+	}
+	if detail.ID != articleID || detail.SourceID != sourceID || !detail.IsFavorite || detail.IsRead {
+		t.Fatalf("unexpected article detail: %+v", detail)
+	}
+
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/999999", nil)
 	router.ServeHTTP(rec, req)
@@ -85,6 +112,37 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("expected 404 for missing favorite target, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/"+int64String(articleID)+"/read-status", strings.NewReader(`{"is_read":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for read-status update, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var updatedRead domain.Article
+	if err := json.Unmarshal(rec.Body.Bytes(), &updatedRead); err != nil {
+		t.Fatalf("unmarshal updated read-status article: %v", err)
+	}
+	if !updatedRead.IsRead || !updatedRead.IsFavorite {
+		t.Fatalf("unexpected updated read-status response: %+v", updatedRead)
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/bad/read-status", strings.NewReader(`{"is_read":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid article id, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/"+int64String(articleID)+"/favorite-status", strings.NewReader(`{"is_favorite":`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid favorite-status payload, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
 	// CSV endpoint は成功時ヘッダと本文の両方を確認する。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/export.csv?source_id=1", nil)
@@ -95,7 +153,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "text/csv; charset=utf-8" {
 		t.Fatalf("unexpected csv content type: %s", got)
 	}
-	if body := rec.Body.String(); !strings.Contains(body, "title,url,source_name,category,published_at,fetched_at,is_read,is_favorite,excerpt,tags") || !strings.Contains(body, "Router article") {
+	if body := rec.Body.String(); !strings.HasPrefix(body, "\uFEFFtitle,url,source_name,category,published_at,fetched_at,is_read,is_favorite,excerpt,tags\n") || !strings.Contains(body, "Router article") || !strings.Contains(body, "2026-04-16T08:00:00Z") {
 		t.Fatalf("unexpected csv body: %s", body)
 	}
 

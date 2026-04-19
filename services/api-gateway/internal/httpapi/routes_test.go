@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -78,6 +79,27 @@ func TestProxyRequestReturnsBadGatewayOnTransportError(t *testing.T) {
 
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusBadGateway)
+	}
+}
+
+func TestProxyRequestReturnsGatewayTimeoutOnDeadlineExceeded(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, context.DeadlineExceeded
+		}),
+	}
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/articles", nil)
+
+	proxyRequest(c, client, "http://article-service/api/v1/articles")
+
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusGatewayTimeout)
 	}
 }
 
@@ -261,5 +283,26 @@ func TestProxyCSVDownloadPassesThroughErrors(t *testing.T) {
 	}
 	if body := rec.Body.String(); body != `{"error":"invalid from"}` {
 		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestProxyCSVDownloadReturnsGatewayTimeoutOnDeadlineExceeded(t *testing.T) {
+	t.Parallel()
+	gin.SetMode(gin.TestMode)
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return nil, context.DeadlineExceeded
+		}),
+	}
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/exports/articles.csv", nil)
+
+	proxyCSVDownload(c, client, "http://article-service/api/v1/articles/export.csv", "articles.csv")
+
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("unexpected status code: got=%d want=%d", rec.Code, http.StatusGatewayTimeout)
 	}
 }

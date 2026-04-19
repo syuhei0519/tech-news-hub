@@ -126,6 +126,11 @@ jobs:
           ARTICLE_SERVICE_TEST_MYSQL_DSN: app_user:app_password@tcp(127.0.0.1:3306)/tech_feed_hub?parseTime=true&multiStatements=true
         run: make test-article-integration
 
+      - name: Run notification-service integration tests
+        env:
+          NOTIFICATION_SERVICE_TEST_MYSQL_DSN: app_user:app_password@tcp(127.0.0.1:3306)/tech_feed_hub?parseTime=true&multiStatements=true
+        run: make test-notification-integration
+
   smoke:
     name: smoke
     runs-on: ubuntu-latest

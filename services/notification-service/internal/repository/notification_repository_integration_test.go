@@ -109,4 +109,15 @@ func TestNotificationRepositoryListAndReadStatus(t *testing.T) {
 	if missing != nil {
 		t.Fatalf("expected nil for missing notification, got %+v", missing)
 	}
+
+	secondPage, err := repo.List(context.Background(), domain.ListNotificationsParams{
+		Page:     2,
+		PageSize: 1,
+	})
+	if err != nil {
+		t.Fatalf("List second page returned error: %v", err)
+	}
+	if secondPage.Total != 2 || secondPage.TotalPages != 2 || len(secondPage.Items) != 1 || secondPage.Items[0].ID != olderID {
+		t.Fatalf("unexpected second page result: %+v", secondPage)
+	}
 }

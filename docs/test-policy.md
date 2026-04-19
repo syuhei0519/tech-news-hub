@@ -142,17 +142,18 @@
 - frontend build
 - compose config validation
 - article-service MySQL integration test
+- notification-service MySQL integration test
 
 PR での扱い:
 
 - `verify` は高速レーンとして常時実行し、`make verify` の責務を維持する
-- `integration` は article-service の MySQL integration test を常時実行する
+- `integration` は article-service と notification-service の MySQL integration test を常時実行する
 - `smoke` は E2E レーンとして分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
 - `main` への push と `workflow_dispatch` では、docs-only を除き `smoke` も実行する
 
 補足:
 
-- 通常のコード変更では `verify` に `make verify`、`integration` に `make test-article-integration` を割り当てる
+- 通常のコード変更では `verify` に `make verify`、`integration` に `make test-article-integration` と `make test-notification-integration` を割り当てる
 - docs-only 変更では、required status check を維持するため `verify` ジョブは成功させる
 - ただし docs-only 変更時は重い `make verify` を省略してよい
 - docs-only 判定条件は workflow 側で管理する
@@ -162,7 +163,7 @@ PR での扱い:
 将来的に追加候補:
 
 - API / event contract test
-- notification-service など他サービスの MySQL integration test
+- 他サービスの MySQL integration test 追加
 - kind smoke test
 
 ## Minimal E2E Scope
