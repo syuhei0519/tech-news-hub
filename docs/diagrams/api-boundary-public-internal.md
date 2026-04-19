@@ -10,58 +10,58 @@ flowchart LR
   classDef internal fill:#fff7ed,stroke:#ea580c,color:#111827,stroke-width:1px;
   classDef collector fill:#f8fafc,stroke:#64748b,color:#111827,stroke-width:1px;
 
-  subgraph FE["Frontend Routes"]
+  subgraph FE["Frontend Routes / 画面 route"]
     direction TB
-    RHome["/<br/>article list / filters / CSV trigger"]
+    RHome["/<br/>記事一覧 / フィルタ / CSV 出力"]
     RArticle["/articles/:id"]
     RSources["/sources"]
     RSourceDetail["/sources/:id"]
     RNotifications["/notifications"]
   end
 
-  subgraph GW["Public API (Gateway /api/v1, mostly thin proxy)"]
+  subgraph GW["公開 API (Gateway /api/v1, ほぼ thin proxy)"]
     direction TB
-    GArticles["articles group<br/>GET /api/v1/articles<br/>GET /api/v1/articles/:id<br/>PATCH /api/v1/articles/:id/read-status<br/>PATCH /api/v1/articles/:id/favorite-status"]
-    GSources["sources group<br/>GET /api/v1/sources<br/>POST /api/v1/sources<br/>GET /api/v1/sources/:id<br/>PATCH /api/v1/sources/:id<br/>DELETE /api/v1/sources/:id<br/>GET /api/v1/fetch-jobs"]
-    GNotifications["notifications group<br/>GET /api/v1/notifications<br/>PATCH /api/v1/notifications/:id/read-status"]
-    GExports["CSV export exception<br/>GET /api/v1/exports/articles.csv"]
+    GArticles["記事 API group<br/>GET /api/v1/articles<br/>GET /api/v1/articles/:id<br/>PATCH /api/v1/articles/:id/read-status<br/>PATCH /api/v1/articles/:id/favorite-status"]
+    GSources["source API group<br/>GET /api/v1/sources<br/>POST /api/v1/sources<br/>GET /api/v1/sources/:id<br/>PATCH /api/v1/sources/:id<br/>DELETE /api/v1/sources/:id<br/>GET /api/v1/fetch-jobs"]
+    GNotifications["通知 API group<br/>GET /api/v1/notifications<br/>PATCH /api/v1/notifications/:id/read-status"]
+    GExports["CSV export 例外経路<br/>GET /api/v1/exports/articles.csv"]
   end
 
-  subgraph UP["Upstream Public APIs (/api/v1)"]
+  subgraph UP["Upstream 公開 API (/api/v1)"]
     direction TB
-    AArticles["article-service<br/>articles<br/>GET /api/v1/articles<br/>GET /api/v1/articles/:id<br/>PATCH /api/v1/articles/:id/read-status<br/>PATCH /api/v1/articles/:id/favorite-status"]
-    ASources["article-service<br/>sources + fetch-jobs<br/>GET /api/v1/sources<br/>POST /api/v1/sources<br/>GET /api/v1/sources/:id<br/>PATCH /api/v1/sources/:id<br/>DELETE /api/v1/sources/:id<br/>GET /api/v1/fetch-jobs"]
-    AExports["article-service<br/>exports<br/>GET /api/v1/articles/export.csv"]
-    NNotifications["notification-service<br/>notifications<br/>GET /api/v1/notifications<br/>PATCH /api/v1/notifications/:id/read-status"]
+    AArticles["article-service<br/>記事 API<br/>GET /api/v1/articles<br/>GET /api/v1/articles/:id<br/>PATCH /api/v1/articles/:id/read-status<br/>PATCH /api/v1/articles/:id/favorite-status"]
+    ASources["article-service<br/>source + fetch-jobs API<br/>GET /api/v1/sources<br/>POST /api/v1/sources<br/>GET /api/v1/sources/:id<br/>PATCH /api/v1/sources/:id<br/>DELETE /api/v1/sources/:id<br/>GET /api/v1/fetch-jobs"]
+    AExports["article-service<br/>export API<br/>GET /api/v1/articles/export.csv"]
+    NNotifications["notification-service<br/>通知 API<br/>GET /api/v1/notifications<br/>PATCH /api/v1/notifications/:id/read-status"]
   end
 
-  subgraph IN["Internal APIs (/internal)"]
+  subgraph IN["内部 API (/internal)"]
     direction TB
-    AInternal["article-service collector-only group<br/>POST /internal/fetch-jobs/start<br/>POST /internal/ingest<br/>POST /internal/fetch-jobs/:id/finish"]
+    AInternal["article-service collector 専用 group<br/>POST /internal/fetch-jobs/start<br/>POST /internal/ingest<br/>POST /internal/fetch-jobs/:id/finish"]
   end
 
-  subgraph COL["Collector Entry"]
+  subgraph COL["Collector Entry / 収集入口"]
     direction TB
-    CEntry["collector-service entry<br/>POST /api/v1/collect/run"]
-    CWorker["collector-service<br/>source sync + RSS fetch + normalize"]
+    CEntry["collector-service 入口<br/>POST /api/v1/collect/run"]
+    CWorker["collector-service<br/>source 同期 + RSS 取得 + 正規化"]
   end
 
-  RHome -->|list / search| GArticles
-  RHome -->|source filter options| GSources
-  RHome -->|CSV download| GExports
-  RArticle -->|detail + status update| GArticles
-  RSources -->|source list + save| GSources
-  RSourceDetail -->|source detail + fetch-jobs| GSources
-  RNotifications -->|list + read-status| GNotifications
+  RHome -->|一覧 / 検索| GArticles
+  RHome -->|source フィルタ候補| GSources
+  RHome -->|CSV 出力| GExports
+  RArticle -->|詳細 / 状態更新| GArticles
+  RSources -->|source 一覧 / 保存| GSources
+  RSourceDetail -->|source 詳細 / fetch-jobs| GSources
+  RNotifications -->|一覧 / 既読更新| GNotifications
 
   GArticles -->|proxy| AArticles
   GSources -->|proxy| ASources
   GNotifications -->|proxy| NNotifications
-  GExports -. path + download header adjusted in gateway .-> AExports
+  GExports -. gateway で path と download header を調整 .-> AExports
 
   CEntry --> CWorker
-  CWorker -->|load enabled sources| ASources
-  CWorker -->|start job / ingest / finish| AInternal
+  CWorker -->|enabled な source を取得| ASources
+  CWorker -->|job 開始 / ingest / job 完了| AInternal
 
   class RHome,RArticle,RSources,RSourceDetail,RNotifications route;
   class GArticles,GSources,GNotifications,GExports,AArticles,ASources,AExports,NNotifications public;
@@ -71,9 +71,9 @@ flowchart LR
 
 ## 補足
 
-- `api-gateway` は通常 `path / query / body / header` を upstream に渡す thin proxy で、CSV export だけ `GET /api/v1/exports/articles.csv -> GET /api/v1/articles/export.csv` と `Content-Disposition` 調整を行う例外です。
+- `api-gateway` は通常 `path / query / body / header` を upstream に渡す thin proxy で、CSV export だけ `GET /api/v1/exports/articles.csv -> GET /api/v1/articles/export.csv` と `Content-Disposition` の調整を行う例外です。
 - `collector-service` は通常閲覧導線とは別入口で、`GET /api/v1/sources` と `POST /internal/*` を使って `article-service` と連携します。
-- `Internal APIs (/internal)` は collector 連携用であり、frontend や `api-gateway` の公開導線には載せていません。
+- `内部 API (/internal)` は collector 連携用であり、frontend や `api-gateway` の公開導線には載せていません。
 
 ## 主な根拠ファイル
 
