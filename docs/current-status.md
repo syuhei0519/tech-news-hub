@@ -16,6 +16,7 @@
 - collector-service は source 管理 API と同期しながら RSS 収集と ingest を実行する
 - notification-service と frontend の通知一覧 / 既読更新は実装済み
 - Docker Compose、GitHub Actions、公開 OpenAPI 追従まで整備済み
+- 最小 E2E は未導入で、component test までが自動化の中心になっている
 - Phase 4.5 として、テスト戦略の実装と回帰防止基盤の強化を最優先で進める
 
 ## Verified State
@@ -24,6 +25,7 @@
 - frontend の `npm run build` は通過済み
 - `docker compose config -q` は通過済み
 - `make verify` は通過済み
+- E2E は runner と CI レーンをこれから分離導入する段階
 
 ## Highest Priority Next
 
@@ -50,7 +52,7 @@
 
 - 認証は未実装
 - kind / Helm / Argo CD は未着手
-- frontend の自動テスト基盤は未導入
+- frontend の component test は導入済みだが、実ブラウザ E2E は未導入
 - repository / DB 境界と service 間契約の自動検証は未整備
 
 ## Update Rules

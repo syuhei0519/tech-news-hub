@@ -49,6 +49,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   api-gateway:
     build:
@@ -62,8 +67,15 @@ services:
     ports:
       - "${API_GATEWAY_PORT}:8080"
     depends_on:
-      - article-service
-      - notification-service
+      article-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   collector-service:
     build:
@@ -77,8 +89,10 @@ services:
     ports:
       - "${COLLECTOR_SERVICE_PORT}:8082"
     depends_on:
-      - article-service
-      - rabbitmq
+      article-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   notification-service:
     build:
@@ -97,6 +111,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   frontend:
     build:
@@ -104,10 +123,17 @@ services:
       dockerfile: deployments/docker/frontend.Dockerfile
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+      VITE_PROXY_TARGET: http://api-gateway:8080
     ports:
       - "${FRONTEND_PORT}:5173"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
 volumes:
   mysql_data:
