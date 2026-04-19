@@ -48,7 +48,7 @@ test-frontend:
 	cd frontend && npm run test:run
 
 test-article-integration:
-	cd services/article-service && ARTICLE_SERVICE_RUN_INTEGRATION=1 GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test ./...
+	cd services/article-service && ARTICLE_SERVICE_RUN_INTEGRATION=1 GOCACHE=/tmp/go-build GOMODCACHE=/tmp/go-mod go test -p 1 ./...
 
 verify: test test-frontend build
 	$(COMPOSE) config -q
