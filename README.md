@@ -15,7 +15,7 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 
 ## Architecture And Diagrams
 
-- runtime 構成、記事収集、通知生成、CI / テストレーンの図は [図ドキュメント](docs/diagrams/README.md) から参照できます
+- runtime 構成、データモデル / 所有責務、記事収集、通知生成、CI / テストレーンの図は [図ドキュメント](docs/diagrams/README.md) から参照できます
 - 図は現行 repo 実装を根拠にしており、`tech-news-hub/` 配下や未実装の将来構成は含めていません
 
 ## Current Status
