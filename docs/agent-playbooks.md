@@ -16,6 +16,7 @@
 必要になってから開くもの:
 
 - `docs/openapi/api-gateway.summary.md`
+- [図ドキュメント](diagrams/README.md)
 - `RULES.md`
 - 領域別 guideline
 - `docs/runbook.md`

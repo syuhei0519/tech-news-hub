@@ -23,6 +23,12 @@
 - `notification-service` はイベントを購読し、通知レコードを生成して公開 API で返す
 - RabbitMQ または `notification-service` の障害は記事閲覧 API の可用性より優先しない
 
+## Related Diagrams
+
+- [システム全体構成図](diagrams/system-overview.md)
+- [記事収集フロー図](diagrams/article-collection-flow.md)
+- [通知生成フロー図](diagrams/notification-generation-flow.md)
+
 ## Kubernetes Readiness
 
 - コンテナ設定は環境変数で外出し
