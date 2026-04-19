@@ -96,7 +96,14 @@ ARTICLE_SERVICE_TEST_MYSQL_DSN='app_user:app_password@tcp(127.0.0.1:3306)/tech_f
 ```bash
 cd frontend
 npm install
+npm run test:run
 npm run build
+```
+
+または:
+
+```bash
+make test-frontend
 ```
 
 ### Compose Config
@@ -116,6 +123,22 @@ make dev-config
 ```bash
 make verify
 ```
+
+補足:
+
+- `make verify` は backend test + frontend test + build + compose config check をまとめて実行する
+- MySQL が必要な article-service integration test は `make verify` に含めない
+
+## CI Lanes
+
+- `fast`: `make verify` を実行する高速レーン
+- `integration`: article-service の MySQL integration test を実行するレーン
+- `smoke`: Playwright E2E を relevant changes 時に実行するレーン
+
+補足:
+
+- docs-only 変更では `fast` は required check を維持しつつ重い検証を省略する
+- `integration` と `smoke` は docs-only 変更では実行しない
 
 ## Health Endpoints
 
