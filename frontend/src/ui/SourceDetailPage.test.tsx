@@ -4,66 +4,8 @@ import { http, HttpResponse } from "msw";
 import { SourceDetailPage } from "./SourceDetailPage";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/setup";
-
-type SourceItem = {
-  id: number;
-  name: string;
-  type: string;
-  fetch_url: string;
-  fetch_method: string;
-  interval_minutes: number;
-  default_category: string;
-  is_enabled: boolean;
-  last_fetched_at: string | null;
-  last_fetch_status: string | null;
-  last_error_message: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type FetchJobItem = {
-  id: number;
-  source_id: number;
-  started_at: string;
-  finished_at: string | null;
-  status: "running" | "success" | "failed";
-  fetched_count: number;
-  inserted_count: number;
-  duplicated_count: number;
-  error_message: string | null;
-};
-
-function buildSource(): SourceItem {
-  return {
-    id: 1,
-    name: "Kubernetes Blog",
-    type: "rss",
-    fetch_url: "https://example.com/kubernetes.xml",
-    fetch_method: "rss",
-    interval_minutes: 60,
-    default_category: "kubernetes",
-    is_enabled: true,
-    last_fetched_at: "2026-04-18T00:00:00Z",
-    last_fetch_status: "success",
-    last_error_message: null,
-    created_at: "2026-04-18T00:00:00Z",
-    updated_at: "2026-04-18T00:00:00Z",
-  };
-}
-
-function buildJob(id: number, status: "running" | "success" | "failed", finishedAt: string | null, errorMessage: string | null): FetchJobItem {
-  return {
-    id,
-    source_id: 1,
-    started_at: new Date(Date.UTC(2026, 3, id, 0, 0, 0)).toISOString(),
-    finished_at: finishedAt,
-    status,
-    fetched_count: 10,
-    inserted_count: 7,
-    duplicated_count: 3,
-    error_message: errorMessage,
-  };
-}
+import { buildFetchJob, buildFetchJobsResponse, buildSource } from "../test/fixtures";
+import { sourceDetailHandler } from "../test/handlers";
 
 describe("SourceDetailPage", () => {
   it("shows an error for an invalid source id", () => {
@@ -75,10 +17,19 @@ describe("SourceDetailPage", () => {
     const user = userEvent.setup();
     const requestLog: string[] = [];
     const source = buildSource();
-    const jobs = [buildJob(11, "running", null, null), ...Array.from({ length: 10 }, (_, index) => buildJob(10 - index, index % 2 === 0 ? "failed" : "success", new Date(Date.UTC(2026, 3, 10 - index, 1, 0, 0)).toISOString(), index % 2 === 0 ? "collector failed" : null))];
+    const jobs = [
+      buildFetchJob({ id: 11, status: "running", finished_at: null }),
+      ...Array.from({ length: 10 }, (_, index) =>
+        buildFetchJob({
+          id: 10 - index,
+          status: index % 2 === 0 ? "failed" : "success",
+          error_message: index % 2 === 0 ? "collector failed" : null,
+        }),
+      ),
+    ];
 
     server.use(
-      http.get("http://localhost:8080/api/v1/sources/1", () => HttpResponse.json(source)),
+      sourceDetailHandler(source),
       http.get("http://localhost:8080/api/v1/fetch-jobs", ({ request }) => {
         const url = new URL(request.url);
         const status = url.searchParams.get("status");
@@ -90,13 +41,14 @@ describe("SourceDetailPage", () => {
         const start = (page - 1) * pageSize;
         const items = filtered.slice(start, start + pageSize);
 
-        return HttpResponse.json({
-          items,
-          total: filtered.length,
-          page,
-          page_size: pageSize,
-          total_pages: Math.max(Math.ceil(filtered.length / pageSize), 1),
-        });
+        return HttpResponse.json(
+          buildFetchJobsResponse(items, {
+            total: filtered.length,
+            page,
+            page_size: pageSize,
+            total_pages: Math.max(Math.ceil(filtered.length / pageSize), 1),
+          }),
+        );
       }),
     );
 
@@ -140,7 +92,7 @@ describe("SourceDetailPage", () => {
 
   it("shows a fetch jobs API error", async () => {
     server.use(
-      http.get("http://localhost:8080/api/v1/sources/1", () => HttpResponse.json(buildSource())),
+      sourceDetailHandler(buildSource()),
       http.get("http://localhost:8080/api/v1/fetch-jobs", () =>
         HttpResponse.json({ error: "fetch jobs failed" }, { status: 500 }),
       ),
@@ -153,7 +105,7 @@ describe("SourceDetailPage", () => {
 
   it("shows the empty job state", async () => {
     server.use(
-      http.get("http://localhost:8080/api/v1/sources/1", () => HttpResponse.json(buildSource())),
+      sourceDetailHandler(buildSource()),
       http.get("http://localhost:8080/api/v1/fetch-jobs", () =>
         HttpResponse.json({ items: [], total: 0, page: 1, page_size: 10, total_pages: 1 }),
       ),

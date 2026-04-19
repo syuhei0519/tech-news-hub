@@ -4,50 +4,15 @@ import { http, HttpResponse } from "msw";
 import { SourceManagementPage } from "./SourceManagementPage";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/setup";
-
-type SourceItem = {
-  id: number;
-  name: string;
-  type: string;
-  fetch_url: string;
-  fetch_method: string;
-  interval_minutes: number;
-  default_category: string;
-  is_enabled: boolean;
-  last_fetched_at: string | null;
-  last_fetch_status: string | null;
-  last_error_message: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-function buildSource(overrides: Partial<SourceItem> = {}): SourceItem {
-  return {
-    id: 1,
-    name: "Kubernetes Blog",
-    type: "rss",
-    fetch_url: "https://example.com/kubernetes.xml",
-    fetch_method: "rss",
-    interval_minutes: 60,
-    default_category: "kubernetes",
-    is_enabled: true,
-    last_fetched_at: "2026-04-18T00:00:00Z",
-    last_fetch_status: "success",
-    last_error_message: null,
-    created_at: "2026-04-18T00:00:00Z",
-    updated_at: "2026-04-18T00:00:00Z",
-    ...overrides,
-  };
-}
+import { buildSource } from "../test/fixtures";
+import { sourcesHandler } from "../test/handlers";
 
 describe("SourceManagementPage", () => {
   it("populates the edit form from the selected source and resets to create mode", async () => {
     const user = userEvent.setup();
     const sources = [buildSource()];
 
-    server.use(
-      http.get("http://localhost:8080/api/v1/sources", () => HttpResponse.json({ items: sources })),
-    );
+    server.use(sourcesHandler(() => sources));
 
     renderWithProviders(<SourceManagementPage />);
 
@@ -73,7 +38,7 @@ describe("SourceManagementPage", () => {
     let createCalls = 0;
 
     server.use(
-      http.get("http://localhost:8080/api/v1/sources", () => HttpResponse.json({ items: [] })),
+      sourcesHandler(() => []),
       http.post("http://localhost:8080/api/v1/sources", () => {
         createCalls += 1;
         return HttpResponse.json(buildSource({ id: 2 }));
@@ -102,7 +67,7 @@ describe("SourceManagementPage", () => {
     let updatedPayload: Record<string, unknown> | undefined;
 
     server.use(
-      http.get("http://localhost:8080/api/v1/sources", () => HttpResponse.json({ items: sources })),
+      sourcesHandler(() => sources),
       http.post("http://localhost:8080/api/v1/sources", async ({ request }) => {
         createdPayload = (await request.json()) as Record<string, unknown>;
         const created = buildSource({
@@ -172,7 +137,7 @@ describe("SourceManagementPage", () => {
     let togglePayload: Record<string, unknown> | undefined;
 
     server.use(
-      http.get("http://localhost:8080/api/v1/sources", () => HttpResponse.json({ items: sources })),
+      sourcesHandler(() => sources),
       http.patch("http://localhost:8080/api/v1/sources/1", async ({ request }) => {
         togglePayload = (await request.json()) as Record<string, unknown>;
         sources = [buildSource({ is_enabled: false })];
@@ -204,9 +169,7 @@ describe("SourceManagementPage", () => {
     const user = userEvent.setup();
 
     server.use(
-      http.get("http://localhost:8080/api/v1/sources", () =>
-        HttpResponse.json({ items: [buildSource()] }),
-      ),
+      sourcesHandler(() => [buildSource()]),
       http.patch("http://localhost:8080/api/v1/sources/1", () =>
         HttpResponse.json({ error: "toggle failed" }, { status: 500 }),
       ),

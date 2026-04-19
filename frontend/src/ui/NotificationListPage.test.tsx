@@ -4,42 +4,15 @@ import { http, HttpResponse } from "msw";
 import { NotificationListPage } from "./NotificationListPage";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/setup";
-
-type NotificationItem = {
-  id: number;
-  event_id: string;
-  event_type: "article.ingested" | "collector.fetch.failed";
-  level: "info" | "error";
-  title: string;
-  body: string;
-  source_id: number | null;
-  fetch_job_id: number | null;
-  is_read: boolean;
-  created_at: string;
-  read_at: string | null;
-};
-
-function buildNotification(id: number, isRead: boolean): NotificationItem {
-  return {
-    id,
-    event_id: `evt-${id}`,
-    event_type: id % 2 === 0 ? "collector.fetch.failed" : "article.ingested",
-    level: id % 2 === 0 ? "error" : "info",
-    title: `Notification ${id}`,
-    body: `Body ${id}`,
-    source_id: 3,
-    fetch_job_id: 10 + id,
-    is_read: isRead,
-    created_at: new Date(Date.UTC(2026, 3, id, 0, 0, 0)).toISOString(),
-    read_at: isRead ? new Date(Date.UTC(2026, 3, id, 1, 0, 0)).toISOString() : null,
-  };
-}
+import { buildNotification, buildNotificationsResponse } from "../test/fixtures";
 
 describe("NotificationListPage", () => {
   it("loads notifications, applies filters, and paginates", async () => {
     const user = userEvent.setup();
     const requestLog: string[] = [];
-    const notifications = Array.from({ length: 11 }, (_, index) => buildNotification(11 - index, (11 - index) % 2 === 0));
+    const notifications = Array.from({ length: 11 }, (_, index) =>
+      buildNotification({ id: 11 - index, is_read: (11 - index) % 2 === 0 }),
+    );
 
     server.use(
       http.get("http://localhost:8080/api/v1/notifications", ({ request }) => {
@@ -54,13 +27,14 @@ describe("NotificationListPage", () => {
         const start = (page - 1) * pageSize;
         const items = filtered.slice(start, start + pageSize);
 
-        return HttpResponse.json({
-          items,
-          total: filtered.length,
-          page,
-          page_size: pageSize,
-          total_pages: Math.max(Math.ceil(filtered.length / pageSize), 1),
-        });
+        return HttpResponse.json(
+          buildNotificationsResponse(items, {
+            total: filtered.length,
+            page,
+            page_size: pageSize,
+            total_pages: Math.max(Math.ceil(filtered.length / pageSize), 1),
+          }),
+        );
       }),
     );
 
@@ -86,7 +60,7 @@ describe("NotificationListPage", () => {
   it("updates read status and makes the item visible under the read filter", async () => {
     const user = userEvent.setup();
     const requestLog: string[] = [];
-    let notifications = [buildNotification(1, false)];
+    let notifications = [buildNotification({ id: 1, is_read: false })];
 
     server.use(
       http.get("http://localhost:8080/api/v1/notifications", ({ request }) => {
@@ -95,13 +69,7 @@ describe("NotificationListPage", () => {
         const isRead = url.searchParams.get("is_read");
         const filtered =
           isRead == null ? notifications : notifications.filter((item) => item.is_read === (isRead === "true"));
-        return HttpResponse.json({
-          items: filtered,
-          total: filtered.length,
-          page: 1,
-          page_size: 10,
-          total_pages: 1,
-        });
+        return HttpResponse.json(buildNotificationsResponse(filtered));
       }),
       http.patch("http://localhost:8080/api/v1/notifications/1/read-status", async ({ request }) => {
         const body = (await request.json()) as { is_read: boolean };

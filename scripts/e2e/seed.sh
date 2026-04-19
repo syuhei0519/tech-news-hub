@@ -20,5 +20,6 @@ for _ in $(seq 1 30); do
   sleep 2
 done
 
-# collector や RabbitMQ 到着待ちに寄せず、E2E は deterministic な DB 状態を毎回流し込む。
+# E2E smoke は collector や RabbitMQ 到着待ちに寄せず、
+# Playwright が前提にする最小 DB 状態を毎回 deterministic に再作成する。
 docker compose exec -T mysql mysql -uroot "-p${MYSQL_ROOT_PASSWORD}" "${MYSQL_DATABASE}" < scripts/e2e/seed.sql

@@ -16,7 +16,7 @@
 - collector-service は source 管理 API と同期しながら RSS 収集と ingest を実行する
 - notification-service と frontend の通知一覧 / 既読更新は実装済み
 - Docker Compose、GitHub Actions、公開 OpenAPI 追従まで整備済み
-- 最小 E2E は未導入で、component test までが自動化の中心になっている
+- 最小 E2E smoke は導入済みで、compose seed を使った deterministic 実行へ寄せている
 - Phase 4.5 として、テスト戦略の実装と回帰防止基盤の強化を最優先で進める
 
 ## Verified State
@@ -25,7 +25,7 @@
 - frontend の `npm run build` は通過済み
 - `docker compose config -q` は通過済み
 - `make verify` は通過済み
-- E2E は runner と CI レーンをこれから分離導入する段階
+- Playwright smoke と CI レーンは導入済みで、seed 安定化と coverage 可視化が次の仕上げ対象
 
 ## Highest Priority Next
 
@@ -57,7 +57,7 @@
 
 - 認証は未実装
 - kind / Helm / Argo CD は未着手で、Phase 4.5 完了後に着手する
-- frontend の component test と最小 E2E smoke は導入済みだが、標準検証導線と安定化は未完了
+- frontend の component test と最小 E2E smoke は導入済みだが、共通 helper 整理と可視化は継続整備中
 - repository / DB 境界と service 間契約の自動検証は未整備
 
 ## Update Rules

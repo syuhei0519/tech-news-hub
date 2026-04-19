@@ -119,6 +119,12 @@ npm run build
 make test-frontend
 ```
 
+coverage を出したい場合:
+
+```bash
+make test-frontend-coverage
+```
+
 ### Compose Config
 
 ```bash
@@ -141,11 +147,28 @@ make verify
 
 - `make verify` は backend test + frontend test + build + compose config check をまとめて実行する
 - MySQL が必要な article-service / notification-service integration test は `make verify` に含めない
+- coverage 可視化は `make verify` に含めず、`make test-frontend-coverage` と CI artifact で扱う
+
+## E2E Smoke
+
+```bash
+make e2e-up
+make e2e-seed
+make test-e2e
+make e2e-down
+```
+
+補足:
+
+- `make e2e-seed` は Playwright smoke が前提にする最小 DB 状態を毎回流し込む
+- seed は記事一覧/詳細/CSV と通知既読更新の 2 シナリオだけを支える
+- collector 実行、外部 RSS、RabbitMQ 到着待ちは E2E の前提に含めない
 
 ## CI Lanes
 
 - `verify`: `make verify` を実行する高速レーン
 - `integration`: article-service と notification-service の MySQL integration test を実行するレーン
+- `coverage`: frontend component test の coverage artifact を生成するレーン
 - `smoke`: Playwright E2E を relevant changes 時に実行するレーン
 
 補足:
