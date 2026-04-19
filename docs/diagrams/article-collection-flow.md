@@ -32,11 +32,11 @@ sequenceDiagram
       Collector->>Article: POST /internal/ingest
       Article->>DB: bulk upsert articles
       Article-->>Collector: inserted_count, duplicated_count
-      Collector->>Article: POST /internal/fetch-jobs/{id}/finish success
+      Collector->>Article: POST /internal/fetch-jobs/:id/finish success
       Article->>DB: update fetch_jobs and source status
       Article-->>Collector: 204 No Content
     else RSS fetch or ingest fails
-      Collector->>Article: POST /internal/fetch-jobs/{id}/finish failed
+      Collector->>Article: POST /internal/fetch-jobs/:id/finish failed
       Article->>DB: update fetch_jobs and source status
       Article-->>Collector: 204 No Content
       Note over Collector: Current implementation returns partial results<br/>and stops on the first error.

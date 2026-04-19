@@ -37,7 +37,7 @@ sequenceDiagram
   N-->>G: list response
   G-->>F: list response
 
-  F->>G: PATCH /api/v1/notifications/{id}/read-status
+  F->>G: PATCH /api/v1/notifications/:id/read-status
   G->>N: proxy read-status update
   N->>DB: update is_read, read_at
   DB-->>N: updated row

@@ -37,7 +37,7 @@ flowchart LR
   collector -->|GET /api/v1/sources| article
   collector -->|POST /internal/fetch-jobs/start| article
   collector -->|POST /internal/ingest| article
-  collector -->|POST /internal/fetch-jobs/{id}/finish| article
+  collector -->|POST /internal/fetch-jobs/:id/finish| article
   collector -->|GET fetch_url| rss
 
   article -->|read and write| mysql
