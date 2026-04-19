@@ -93,8 +93,8 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 
 補足:
 
-- 通常のコード変更では CI を `fast` / `integration` / `smoke` の 3 レーンで実行します
-- `fast` は `make verify` を実行する高速レーンです
+- 通常のコード変更では CI を `verify` / `integration` / `smoke` の 3 レーンで実行します
+- `verify` は `make verify` を実行する高速レーンです
 - `integration` は article-service の MySQL integration test を実行します
 - `smoke` は Playwright E2E を relevant changes 時に実行します
 - docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します

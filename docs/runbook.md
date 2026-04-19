@@ -131,13 +131,13 @@ make verify
 
 ## CI Lanes
 
-- `fast`: `make verify` を実行する高速レーン
+- `verify`: `make verify` を実行する高速レーン
 - `integration`: article-service の MySQL integration test を実行するレーン
 - `smoke`: Playwright E2E を relevant changes 時に実行するレーン
 
 補足:
 
-- docs-only 変更では `fast` は required check を維持しつつ重い検証を省略する
+- docs-only 変更では `verify` は required check を維持しつつ重い検証を省略する
 - `integration` と `smoke` は docs-only 変更では実行しない
 
 ## Health Endpoints

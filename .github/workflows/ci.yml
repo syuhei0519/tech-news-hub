@@ -56,7 +56,7 @@ jobs:
               - 'docs/current-status.md'
 
   fast:
-    name: fast
+    name: verify
     runs-on: ubuntu-latest
     needs: changes
 
