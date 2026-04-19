@@ -8,10 +8,15 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 - `services/api-gateway`: フロント向けBFF
 - `services/article-service`: 記事管理API
 - `services/collector-service`: 外部ソース収集API / ジョブ
-- `services/notification-service`: 通知サービス雛形
+- `services/notification-service`: 通知生成・一覧 API サービス
 - `deployments/compose`: Docker Compose 向け設定
 - `deployments/k8s`: kind / Helm / Argo CD 向け土台
 - `docs`: API設計・フェーズ計画
+
+## Architecture And Diagrams
+
+- runtime 構成、記事収集、通知生成、CI / テストレーンの図は [図ドキュメント](docs/diagrams/README.md) から参照できます
+- 図は現行 repo 実装を根拠にしており、`tech-news-hub/` 配下や未実装の将来構成は含めていません
 
 ## Current Status
 

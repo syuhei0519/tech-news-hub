@@ -135,6 +135,10 @@
 
 ## CI Expectations
 
+関連図:
+
+- [CI / テストレーン構成図](diagrams/ci-test-lanes.md)
+
 最低限 CI で回す対象:
 
 - backend test
