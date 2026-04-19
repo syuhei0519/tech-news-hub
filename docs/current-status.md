@@ -30,29 +30,34 @@
 ## Highest Priority Next
 
 1. Phase 4.5 のテスト戦略実装と回帰防止基盤の強化
-2. article-service の repository / handler / MySQL 結合テスト追加
-3. frontend の記事一覧 / 詳細導線テスト基盤追加
-4. notification / source 管理周辺のテスト強化
-5. collector のデータ揺れケースと service 間契約テスト追加
-6. 最小 E2E と CI への組み込み
-7. kind / Helm / Argo CD の整備
+2. Milestone A: 品質ゲート再整理
+3. Milestone B: 主要境界の自動検証
+4. Milestone C: テスト保守性と可視化
+5. kind / Helm / Argo CD の整備
 
 ## Open GitHub Issues
 
 - `#28` `[Phase 4.5]` テスト戦略の実装と回帰防止基盤の強化
-- `#29` `[Phase 4.5]` article-service の repository / handler / MySQL 結合テストを追加する
-- `#30` `[Phase 4.5]` frontend のテスト基盤を導入し記事一覧 / 詳細導線を守る
-- `#31` `[Phase 4.5]` notification / source 管理周辺のテストを強化する
-- `#32` `[Phase 4.5]` collector のデータ揺れケースと service 間契約テストを追加する
-- `#33` `[Phase 4.5]` 最小 E2E と CI への組み込み方針を整備する
+- `#40` `[Phase 4.5][Milestone A]` 品質ゲート再整理を完了する
+- `#41` `[Phase 4.5][Milestone B]` 主要境界の自動検証を完了する
+- `#42` `[Phase 4.5][Milestone C]` テスト保守性と可視化を仕上げる
+- `#43` `[Phase 4.5]` `make verify` に frontend unit/component test を統合する
+- `#44` `[Phase 4.5]` CI を `fast` / `integration` / `smoke` の 3 層に再編する
+- `#45` `[Phase 4.5]` article-service の integration test を CI 常設ジョブに載せる
+- `#46` `[Phase 4.5]` article-service handler の HTTP integration test を拡充する
+- `#47` `[Phase 4.5]` collector -> article-service の契約テストを追加する
+- `#48` `[Phase 4.5]` notification-service の DB integration test を追加する
+- `#49` `[Phase 4.5]` API の error case テストを強化する
+- `#50` `[Phase 4.5]` frontend テスト共通基盤とテストデータ戦略を整理する
+- `#51` `[Phase 4.5]` Playwright E2E の seed 安定化と可視化を進める
 - `#7` `[Phase 5] kind デプロイ、Helm Chart、Argo CD の整備`
 - `#6` `[Phase 6] Proxmox クラスタ移行、永続化、監視拡張`
 
 ## Known Gaps
 
 - 認証は未実装
-- kind / Helm / Argo CD は未着手
-- frontend の component test は導入済みだが、実ブラウザ E2E は未導入
+- kind / Helm / Argo CD は未着手で、Phase 4.5 完了後に着手する
+- frontend の component test と最小 E2E smoke は導入済みだが、標準検証導線と安定化は未完了
 - repository / DB 境界と service 間契約の自動検証は未整備
 
 ## Update Rules
