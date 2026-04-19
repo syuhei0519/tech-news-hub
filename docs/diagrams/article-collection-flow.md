@@ -6,44 +6,44 @@
 ```mermaid
 sequenceDiagram
   autonumber
-  actor Caller as External caller<br/>manual / API-triggered collection
+  actor Caller as 外部呼び出し元<br/>手動 / API-triggered collection
   participant Collector as collector-service
   participant Article as article-service
-  participant RSS as External RSS source
+  participant RSS as 外部 RSS source
   participant DB as MySQL
 
   Caller->>Collector: POST /api/v1/collect/run
   Collector->>Article: GET /api/v1/sources
-  Article->>DB: read sources
+  Article->>DB: sources を取得
   DB-->>Article: source rows
   Article-->>Collector: items
-  Note over Collector: Disabled sources are skipped.<br/>Enabled sources are processed sequentially.
+  Note over Collector: disabled の source は除外する。<br/>enabled の source は順次処理する。
 
-  loop each enabled source
+  loop enabled な source ごと
     Collector->>Article: POST /internal/fetch-jobs/start
-    Article->>DB: insert fetch_jobs(status=running)
+    Article->>DB: fetch_jobs に running を記録
     Article-->>Collector: source_id, job_id
 
     Collector->>RSS: GET fetch_url
 
-    alt RSS fetch and ingest succeed
+    alt RSS 取得と ingest が成功
       RSS-->>Collector: RSS feed
-      Note over Collector: Normalize RSS items and generate dedupe_key.
+      Note over Collector: RSS item を正規化し、dedupe_key を生成する。
       Collector->>Article: POST /internal/ingest
-      Article->>DB: bulk upsert articles
+      Article->>DB: articles を bulk upsert
       Article-->>Collector: inserted_count, duplicated_count
       Collector->>Article: POST /internal/fetch-jobs/:id/finish success
-      Article->>DB: update fetch_jobs and source status
+      Article->>DB: fetch_jobs と source status を更新
       Article-->>Collector: 204 No Content
-    else RSS fetch or ingest fails
+    else RSS 取得または ingest が失敗
       Collector->>Article: POST /internal/fetch-jobs/:id/finish failed
-      Article->>DB: update fetch_jobs and source status
+      Article->>DB: fetch_jobs と source status を更新
       Article-->>Collector: 204 No Content
-      Note over Collector: Current implementation returns partial results<br/>and stops on the first error.
+      Note over Collector: 現在実装では partial results を返し、<br/>最初のエラーで処理を止める。
     end
   end
 
-  Collector-->>Caller: 202 Accepted or error response
+  Collector-->>Caller: 202 Accepted または error response
 ```
 
 ## 補足
