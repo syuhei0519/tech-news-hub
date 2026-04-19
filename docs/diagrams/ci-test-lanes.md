@@ -7,7 +7,7 @@
 flowchart TD
   subgraph Triggers[トリガ]
     pr[pull_request]
-    push[push(main)]
+    push[push main]
     dispatch[workflow_dispatch]
   end
 
@@ -37,7 +37,7 @@ flowchart TD
   end
 
   subgraph Smoke[smoke]
-    smokeGate{docs_only ではなく<br/>push(main) / workflow_dispatch /<br/>e2e_relevant = true の PR か?}
+    smokeGate{docs_only ではなく<br/>push main / workflow_dispatch /<br/>e2e_relevant = true の PR か?}
     env[.env.example を .env にコピー]
     browsers[Playwright browsers を導入]
     e2eUp[make e2e-up]
