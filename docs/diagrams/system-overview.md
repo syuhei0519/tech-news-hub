@@ -5,47 +5,47 @@
 
 ```mermaid
 flowchart LR
-  subgraph Client
-    user[Browser / User]
-    frontend[frontend<br/>React + TypeScript + Vite]
+  subgraph Client[クライアント]
+    user[利用者 / Browser]
+    frontend[frontend<br/>UI<br/>React + TypeScript + Vite]
   end
 
-  subgraph Public_API[Public API]
-    gateway[api-gateway<br/>/api/v1/*]
+  subgraph Public_API[公開 API]
+    gateway[api-gateway<br/>公開 API /api/v1/*]
   end
 
-  subgraph Processing
+  subgraph Processing[処理系 service]
     article[article-service]
     collector[collector-service]
     notification[notification-service]
   end
 
-  subgraph Data_Messaging[Data and Messaging]
+  subgraph Data_Messaging[データ / メッセージ基盤]
     mysql[(MySQL<br/>articles / sources / fetch_jobs / notifications)]
     rabbit[(RabbitMQ exchange<br/>tech-feed.events)]
   end
 
-  subgraph External
-    rss[External RSS sources]
+  subgraph External[外部]
+    rss[外部 RSS sources]
   end
 
   user --> frontend
   frontend -->|HTTP /api/v1/*| gateway
-  gateway -->|articles / sources / fetch-jobs / CSV| article
-  gateway -->|notifications| notification
+  gateway -->|記事 / source / fetch-jobs / CSV| article
+  gateway -->|通知一覧 / 既読更新| notification
 
-  collector -->|GET /api/v1/sources| article
-  collector -->|POST /internal/fetch-jobs/start| article
-  collector -->|POST /internal/ingest| article
-  collector -->|POST /internal/fetch-jobs/:id/finish| article
-  collector -->|GET fetch_url| rss
+  collector -->|source 一覧取得<br/>GET /api/v1/sources| article
+  collector -->|fetch job 開始<br/>POST /internal/fetch-jobs/start| article
+  collector -->|ingest<br/>POST /internal/ingest| article
+  collector -->|fetch job 完了<br/>POST /internal/fetch-jobs/:id/finish| article
+  collector -->|RSS 取得<br/>GET fetch_url| rss
 
-  article -->|read and write| mysql
-  notification -->|read and write| mysql
+  article -->|読み書き| mysql
+  notification -->|読み書き| mysql
 
-  article -->|publish article.ingested| rabbit
-  collector -->|publish collector.fetch.failed| rabbit
-  rabbit -->|consume events| notification
+  article -->|article.ingested を publish| rabbit
+  collector -->|collector.fetch.failed を publish| rabbit
+  rabbit -->|event を consume| notification
 ```
 
 ## 補足

@@ -6,40 +6,40 @@
 ```mermaid
 sequenceDiagram
   autonumber
-  participant A as article-service publisher
-  participant C as collector-service publisher
+  participant A as article-service 発行側
+  participant C as collector-service 発行側
   participant MQ as RabbitMQ exchange<br/>tech-feed.events
   participant N as notification-service consumer
   participant DB as MySQL notifications
   participant G as api-gateway
-  actor F as frontend / Browser
+  actor F as 利用者 / frontend
 
   alt article.ingested
-    A->>MQ: publish article.ingested
+    A->>MQ: article.ingested を publish
   else collector.fetch.failed
-    C->>MQ: publish collector.fetch.failed
+    C->>MQ: collector.fetch.failed を publish
   end
 
-  MQ->>N: deliver event to notification-service consumer
+  MQ->>N: event を consumer に配送
 
   alt event_type = article.ingested
-    N->>N: build info notification
-    N->>DB: insert notifications row
+    N->>N: info 通知を組み立てる
+    N->>DB: notifications 行を insert
   else event_type = collector.fetch.failed
-    N->>N: build error notification
-    N->>DB: insert notifications row
+    N->>N: error 通知を組み立てる
+    N->>DB: notifications 行を insert
   end
 
-  F->>G: GET /api/v1/notifications
-  G->>N: proxy /api/v1/notifications
-  N->>DB: select notifications
+  F->>G: 通知一覧を取得<br/>GET /api/v1/notifications
+  G->>N: /api/v1/notifications を proxy
+  N->>DB: notifications を取得
   DB-->>N: notification rows
   N-->>G: list response
   G-->>F: list response
 
-  F->>G: PATCH /api/v1/notifications/:id/read-status
-  G->>N: proxy read-status update
-  N->>DB: update is_read, read_at
+  F->>G: 既読状態を更新<br/>PATCH /api/v1/notifications/:id/read-status
+  G->>N: read-status update を proxy
+  N->>DB: is_read と read_at を更新
   DB-->>N: updated row
   N-->>G: updated notification
   G-->>F: updated notification

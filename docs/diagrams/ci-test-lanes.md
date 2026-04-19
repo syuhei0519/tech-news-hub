@@ -5,20 +5,20 @@
 
 ```mermaid
 flowchart TD
-  subgraph Triggers
+  subgraph Triggers[トリガ]
     pr[pull_request]
-    push[push main]
+    push[push(main)]
     dispatch[workflow_dispatch]
   end
 
-  subgraph Detection
-    changes[changes job<br/>detect docs_only and e2e_relevant]
+  subgraph Detection[変更判定]
+    changes[changes job<br/>docs_only と e2e_relevant を判定]
   end
 
   subgraph Verify[verify]
     verifyGate{docs_only?}
     verifyRun[make verify]
-    verifySkip[skip heavy verification<br/>lightweight success]
+    verifySkip[重い検証を省略<br/>軽量成功で完了]
   end
 
   subgraph Integration[integration]
@@ -26,26 +26,26 @@ flowchart TD
     mysql[(MySQL service container)]
     articleInt[make test-article-integration]
     notificationInt[make test-notification-integration]
-    integrationSkip[skip integration]
+    integrationSkip[integration を skip]
   end
 
   subgraph Coverage[coverage]
     coverageGate{docs_only?}
     coverageRun[make test-frontend-coverage]
-    coverageArtifact[upload frontend coverage artifact]
-    coverageSkip[skip coverage]
+    coverageArtifact[frontend coverage artifact を upload]
+    coverageSkip[coverage を skip]
   end
 
   subgraph Smoke[smoke]
-    smokeGate{docs_only != true and<br/>push main / workflow_dispatch /<br/>PR with e2e_relevant = true?}
-    env[cp .env.example .env]
-    browsers[install Playwright browsers]
+    smokeGate{docs_only ではなく<br/>push(main) / workflow_dispatch /<br/>e2e_relevant = true の PR か?}
+    env[.env.example を .env にコピー]
+    browsers[Playwright browsers を導入]
     e2eUp[make e2e-up]
     e2eSeed[make e2e-seed]
     e2eRun[make test-e2e]
-    report[upload Playwright report<br/>on failure]
+    report[失敗時に Playwright report を upload]
     e2eDown[make e2e-down]
-    smokeSkip[skip smoke]
+    smokeSkip[smoke を skip]
   end
 
   pr --> changes
@@ -57,19 +57,19 @@ flowchart TD
   changes --> coverageGate
   changes --> smokeGate
 
-  verifyGate -- yes --> verifySkip
-  verifyGate -- no --> verifyRun
+  verifyGate -- はい --> verifySkip
+  verifyGate -- いいえ --> verifyRun
 
-  integrationGate -- yes --> integrationSkip
-  integrationGate -- no --> mysql --> articleInt --> notificationInt
+  integrationGate -- はい --> integrationSkip
+  integrationGate -- いいえ --> mysql --> articleInt --> notificationInt
 
-  coverageGate -- yes --> coverageSkip
-  coverageGate -- no --> coverageRun --> coverageArtifact
+  coverageGate -- はい --> coverageSkip
+  coverageGate -- いいえ --> coverageRun --> coverageArtifact
 
-  smokeGate -- no --> smokeSkip
-  smokeGate -- yes --> env --> browsers --> e2eUp --> e2eSeed --> e2eRun
-  e2eRun -->|failure only| report
-  e2eRun -->|always| e2eDown
+  smokeGate -- いいえ --> smokeSkip
+  smokeGate -- はい --> env --> browsers --> e2eUp --> e2eSeed --> e2eRun
+  e2eRun -->|失敗時のみ| report
+  e2eRun -->|常に後処理| e2eDown
   report --> e2eDown
 ```
 
