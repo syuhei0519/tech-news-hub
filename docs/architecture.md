@@ -26,6 +26,7 @@
 ## Related Diagrams
 
 - [システム全体構成図](diagrams/system-overview.md)
+- [データモデル / 所有責務 ER 図](diagrams/data-model-ownership-er.md)
 - [記事収集フロー図](diagrams/article-collection-flow.md)
 - [通知生成フロー図](diagrams/notification-generation-flow.md)
 
