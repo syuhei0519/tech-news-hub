@@ -23,10 +23,11 @@
 ## Verified State
 
 - Go サービスの `go test ./...` は通過済み
+- frontend の `npm run test:run` は通過済み
 - frontend の `npm run build` は通過済み
 - `docker compose config -q` は通過済み
 - `make verify` は通過済み
-- Playwright smoke と CI レーンは導入済みで、seed 安定化と coverage 可視化が次の仕上げ対象
+- Playwright smoke、integration、coverage を含む CI レーンは導入済み
 
 ## Highest Priority Next
 
@@ -45,8 +46,8 @@
 
 - 認証は未実装
 - kind / Helm / Argo CD は未着手で、これが次の主対象
-- frontend の component test と最小 E2E smoke は導入済みだが、共通 helper 整理と可視化は継続整備中
-- coverage artifact は導入済みで、OpenAPI 差分検知は将来の強化候補
+- OpenAPI 差分検知は未導入で、将来の強化候補
+- kind 着手前のドキュメント同期はこの時点の状態で完了している
 
 ## Update Rules
 

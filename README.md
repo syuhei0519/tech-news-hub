@@ -15,7 +15,7 @@ DevOps / インフラ / クラウド / SRE / CI/CD 関連の技術情報を定�
 
 ## Current Status
 
-Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3 の通知経路、Phase 4 の基盤整備を実装済みです。次段として、Phase 5 より前に Phase 4.5 のテスト強化を進めます。
+Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3 の通知経路、Phase 4 の基盤整備、Phase 4.5 のテスト強化まで実装済みです。次段は Phase 5 の kind / Helm / Argo CD 整備です。
 
 - article-service / collector-service / api-gateway / frontend
 - MySQL 接続
@@ -32,8 +32,8 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 
 現在地:
 
-- Phase 4 の Compose / CI / OpenAPI 整備まで実装済み
-- 次優先は Phase 4.5 のテスト戦略実装と回帰防止基盤の強化
+- Phase 4.5 の品質ゲート、integration test、component test、最小 E2E smoke まで整備済み
+- 次優先は Phase 5 の kind / Helm / Argo CD 整備
 - collector-service は article-service の source 管理 API から実行時に収集対象を同期
 - 検証状態の詳細は `docs/current-status.md` を参照
 
@@ -88,15 +88,34 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 - `make build`: frontend build
 - `make test`: backend test
 - `make test-frontend`: frontend unit/component test
+- `make test-frontend-coverage`: frontend unit/component test + coverage
 - `make test-article-integration`: article-service の MySQL integration test
+- `make test-notification-integration`: notification-service の MySQL integration test
 - `make verify`: backend test + frontend test + build + compose config check
+- `make e2e-up` / `make e2e-seed` / `make test-e2e` / `make e2e-down`: Playwright E2E smoke
+
+## Testing Overview
+
+- 日常の基本確認ルートは `make verify`
+- DB 境界は `integration` レーンで article-service / notification-service の MySQL integration test を常時確認
+- 主要ユーザーフローは `smoke` レーンで Playwright E2E を relevant changes 時に確認
+- frontend coverage は `coverage` レーンで artifact 化する
+
+テストレイヤの役割:
+
+- Unit / Component: 日常変更で壊れやすいロジックと画面導線を高速に確認する
+- Integration: repository / DB / handler 境界を確認する
+- E2E smoke: 記事導線と通知導線の最小フローだけを確認する
+
+詳細な基準は `docs/test-policy.md` を参照してください。
 
 補足:
 
-- 通常のコード変更では CI を `verify` / `integration` / `smoke` の 3 レーンで実行します
+- 通常のコード変更では CI を `verify` / `integration` / `coverage` / `smoke` のレーンで実行します
 - `verify` は `make verify` を実行する高速レーンです
-- `integration` は article-service の MySQL integration test を実行します
+- `integration` は article-service と notification-service の MySQL integration test を実行します
+- `coverage` は frontend coverage artifact を生成します
 - `smoke` は Playwright E2E を relevant changes 時に実行します
-- docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します
+- docs-only 変更では、GitHub Actions は `verify` を軽量成功で完了させつつ重い検証を省略します
 - collector-service は `ARTICLE_SERVICE_URL` 経由で source 一覧を取得し、`is_enabled=true` の source を収集します
 - ローカルで即時反映が必要な場合は `docker-compose.dev.yml` を重ねる `make dev-up` を使います
