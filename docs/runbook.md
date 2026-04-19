@@ -91,6 +91,19 @@ ARTICLE_SERVICE_TEST_MYSQL_DSN='app_user:app_password@tcp(127.0.0.1:3306)/tech_f
 - `ARTICLE_SERVICE_TEST_MYSQL_DSN` を省略した場合は `127.0.0.1:3306` のローカル MySQL を既定で参照する
 - schema は `deployments/compose/mysql/init/001_schema.sql` をそのまま適用する
 
+### notification-service MySQL Integration Test
+
+```bash
+docker compose up -d mysql
+NOTIFICATION_SERVICE_TEST_MYSQL_DSN='app_user:app_password@tcp(127.0.0.1:3306)/tech_feed_hub?parseTime=true&multiStatements=true' make test-notification-integration
+```
+
+補足:
+
+- integration test は `NOTIFICATION_SERVICE_RUN_INTEGRATION=1` が付いたときだけ実行される
+- `NOTIFICATION_SERVICE_TEST_MYSQL_DSN` を省略した場合は `127.0.0.1:3306` のローカル MySQL を既定で参照する
+- schema は `deployments/compose/mysql/init/001_schema.sql` をそのまま適用する
+
 ### Frontend
 
 ```bash
@@ -127,18 +140,19 @@ make verify
 補足:
 
 - `make verify` は backend test + frontend test + build + compose config check をまとめて実行する
-- MySQL が必要な article-service integration test は `make verify` に含めない
+- MySQL が必要な article-service / notification-service integration test は `make verify` に含めない
 
 ## CI Lanes
 
 - `verify`: `make verify` を実行する高速レーン
-- `integration`: article-service の MySQL integration test を実行するレーン
+- `integration`: article-service と notification-service の MySQL integration test を実行するレーン
 - `smoke`: Playwright E2E を relevant changes 時に実行するレーン
 
 補足:
 
 - docs-only 変更では `verify` は required check を維持しつつ重い検証を省略する
 - `integration` と `smoke` は docs-only 変更では実行しない
+- docs-only の PR / push では CI workflow 自体を起動せず、PR 形式チェック系のみを実行する
 
 ## Health Endpoints
 

@@ -124,6 +124,7 @@
 - `422 Unprocessable Entity`: バリデーション不正
 - `500 Internal Server Error`: 想定外障害
 - `502 Bad Gateway`: upstream service failure
+- `504 Gateway Timeout`: upstream timeout
 
 ### Error Body
 

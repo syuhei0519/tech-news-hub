@@ -2,12 +2,15 @@ package collector
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"tech-feed-hub/collector-service/internal/events"
 )
@@ -99,6 +102,77 @@ func TestRunCreatesAndFinishesFetchJobOnSuccess(t *testing.T) {
 	}
 	if len(results) != 1 || results[0].Status != "success" || results[0].JobID != 11 || results[0].SourceID != 7 {
 		t.Fatalf("unexpected results: %+v", results)
+	}
+}
+
+func TestRunSendsNormalizedIngestContract(t *testing.T) {
+	t.Parallel()
+
+	// collector -> article-service の payload shape を固定し、
+	// 日付正規化・null handling・dedupe_key 生成のズレを検知する。
+	var ingestPayload IngestPayload
+
+	service := NewService("http://article-service")
+	service.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/api/v1/sources":
+			return newJSONResponse(http.StatusOK, `{"items":[{"id":7,"name":"Example","type":"rss","fetch_url":"http://feed-source/rss","fetch_method":"rss","interval_minutes":30,"default_category":"cloud","is_enabled":true}]}`), nil
+		case "/rss":
+			return newXMLResponse(http.StatusOK, `<?xml version="1.0"?><rss><channel>`+
+				`<item><title>RFC1123Z</title><link>https://example.com/with-date</link><description><![CDATA[<p>desc</p>]]></description><pubDate>Mon, 02 Jan 2006 15:04:05 +0900</pubDate></item>`+
+				`<item><title>Missing Date</title><link>https://example.com/no-date</link><description>plain text</description></item>`+
+				`</channel></rss>`), nil
+		case "/internal/fetch-jobs/start":
+			return newJSONResponse(http.StatusAccepted, `{"source_id":7,"job_id":11}`), nil
+		case "/internal/ingest":
+			if err := json.NewDecoder(r.Body).Decode(&ingestPayload); err != nil {
+				t.Fatalf("decode ingest payload: %v", err)
+			}
+			return newJSONResponse(http.StatusAccepted, `{"source_id":7,"job_id":11,"fetched_count":2,"inserted_count":1,"duplicated_count":1}`), nil
+		case "/internal/fetch-jobs/11/finish":
+			return newJSONResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+			return nil, nil
+		}
+	})}
+
+	if _, err := service.Run(context.Background()); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if ingestPayload.JobID != 11 || ingestPayload.SourceID != 7 {
+		t.Fatalf("unexpected ingest payload ids: %+v", ingestPayload)
+	}
+	if ingestPayload.Source.Name != "Example" || ingestPayload.Source.DefaultCategory != "cloud" || ingestPayload.Source.FetchMethod != "rss" {
+		t.Fatalf("unexpected ingest source contract: %+v", ingestPayload.Source)
+	}
+	if len(ingestPayload.Articles) != 2 {
+		t.Fatalf("expected 2 normalized articles, got %+v", ingestPayload.Articles)
+	}
+
+	// pubDate がある記事は RFC3339 UTC に正規化して送る。
+	first := ingestPayload.Articles[0]
+	if first.Title != "RFC1123Z" || first.URL != "https://example.com/with-date" || first.Excerpt != "desc" || first.Category != "cloud" {
+		t.Fatalf("unexpected first normalized article: %+v", first)
+	}
+	if first.PublishedAt == nil || first.PublishedAt.Format(time.RFC3339) != "2006-01-02T06:04:05Z" {
+		t.Fatalf("expected normalized published_at, got %+v", first.PublishedAt)
+	}
+	if len(first.Tags) != 1 || first.Tags[0] != "cloud" {
+		t.Fatalf("unexpected first tags: %+v", first.Tags)
+	}
+	if first.DedupeKey != sha256Hex("https://example.com/with-date") {
+		t.Fatalf("unexpected dedupe_key: %s", first.DedupeKey)
+	}
+
+	// pubDate が欠けている記事は ingest 契約上 nil を送り、現在時刻埋めを downstream に持ち込まない。
+	second := ingestPayload.Articles[1]
+	if second.Title != "Missing Date" || second.PublishedAt != nil {
+		t.Fatalf("expected nil published_at for missing date, got %+v", second)
+	}
+	if second.DedupeKey != sha256Hex("https://example.com/no-date") {
+		t.Fatalf("unexpected second dedupe_key: %s", second.DedupeKey)
 	}
 }
 
@@ -264,4 +338,44 @@ func TestRunIgnoresPublisherFailureOnRSSFailure(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "fetch rss status=502") {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func TestRunReturnsErrorOnMalformedFeedAndFinishesFetchJob(t *testing.T) {
+	t.Parallel()
+
+	// 壊れた feed でも fetch job は failed で閉じ、UI から失敗履歴を追える状態を維持する。
+	var finishPayload finishFetchJobPayload
+
+	service := NewService("http://article-service")
+	service.client = &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.Path {
+		case "/api/v1/sources":
+			return newJSONResponse(http.StatusOK, `{"items":[{"id":7,"name":"Example","type":"rss","fetch_url":"http://feed-source/rss","fetch_method":"rss","interval_minutes":60,"default_category":"cloud","is_enabled":true}]}`), nil
+		case "/rss":
+			return newXMLResponse(http.StatusOK, `<rss><channel><item><title>broken</channel></rss>`), nil
+		case "/internal/fetch-jobs/start":
+			return newJSONResponse(http.StatusAccepted, `{"source_id":7,"job_id":11}`), nil
+		case "/internal/fetch-jobs/11/finish":
+			if err := json.NewDecoder(r.Body).Decode(&finishPayload); err != nil {
+				t.Fatalf("decode finish payload: %v", err)
+			}
+			return newJSONResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+			return nil, nil
+		}
+	})}
+
+	_, err := service.Run(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "decode rss") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if finishPayload.Status != "failed" || finishPayload.ErrorMessage == nil || !strings.Contains(*finishPayload.ErrorMessage, "decode rss") {
+		t.Fatalf("unexpected finish payload after malformed feed: %+v", finishPayload)
+	}
+}
+
+func sha256Hex(value string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(value)))
+	return fmt.Sprintf("%x", sum[:])
 }

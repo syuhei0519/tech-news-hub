@@ -1,7 +1,10 @@
 package httpapi
 
 import (
+	"context"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -92,7 +95,7 @@ func proxyRequest(c *gin.Context, client *http.Client, targetURL string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		c.JSON(proxyErrorStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	defer resp.Body.Close()
@@ -123,7 +126,7 @@ func proxyCSVDownload(c *gin.Context, client *http.Client, targetURL string, fil
 
 	resp, err := client.Do(req)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		c.JSON(proxyErrorStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	defer resp.Body.Close()
@@ -143,4 +146,22 @@ func proxyCSVDownload(c *gin.Context, client *http.Client, targetURL string, fil
 	c.Header("Content-Type", "text/csv; charset=utf-8")
 	c.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
 	c.Data(resp.StatusCode, "text/csv; charset=utf-8", body)
+}
+
+func proxyErrorStatus(err error) int {
+	if err == nil {
+		return http.StatusBadGateway
+	}
+
+	var netErr net.Error
+	switch {
+	case err == context.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	case errors.Is(err, context.DeadlineExceeded):
+		return http.StatusGatewayTimeout
+	case errors.As(err, &netErr) && netErr.Timeout():
+		return http.StatusGatewayTimeout
+	default:
+		return http.StatusBadGateway
+	}
 }
