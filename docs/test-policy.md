@@ -137,29 +137,32 @@
 
 最低限 CI で回す対象:
 
-- Go test
+- backend test
+- frontend unit/component test
 - frontend build
 - compose config validation
+- article-service MySQL integration test
 
 PR での扱い:
 
 - `verify` は高速レーンとして常時実行し、`make verify` の責務を維持する
-- E2E は `e2e-smoke` として別レーンに分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
-- `main` への push と `workflow_dispatch` では、docs-only を除き `e2e-smoke` も実行する
+- `integration` は article-service の MySQL integration test を常時実行する
+- `smoke` は E2E レーンとして分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
+- `main` への push と `workflow_dispatch` では、docs-only を除き `smoke` も実行する
 
 補足:
 
-- 通常のコード変更では上記を `make verify` で実行する
+- 通常のコード変更では `verify` に `make verify`、`integration` に `make test-article-integration` を割り当てる
 - docs-only 変更では、required status check を維持するため `verify` ジョブは成功させる
 - ただし docs-only 変更時は重い `make verify` を省略してよい
 - docs-only 判定条件は workflow 側で管理する
 - `make verify` に E2E は含めず、`make e2e-up` / `make e2e-seed` / `make test-e2e` / `make e2e-down` で責務を分ける
+- `integration` は MySQL service container 付きの独立 job とし、`verify` に混ぜない
 
 将来的に追加候補:
 
-- MySQL integration test の常時実行拡張
 - API / event contract test
-- frontend component test
+- notification-service など他サービスの MySQL integration test
 - kind smoke test
 
 ## Minimal E2E Scope

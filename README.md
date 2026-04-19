@@ -87,11 +87,16 @@ Phase 1 の記事閲覧フローに加えて、Phase 2 の主要機能、Phase 3
 - `make dev-ps`: dev compose の状態確認
 - `make build`: frontend build
 - `make test`: backend test
-- `make verify`: test + build + compose config check
+- `make test-frontend`: frontend unit/component test
+- `make test-article-integration`: article-service の MySQL integration test
+- `make verify`: backend test + frontend test + build + compose config check
 
 補足:
 
-- 通常のコード変更では CI も `make verify` 相当を実行します
+- 通常のコード変更では CI を `verify` / `integration` / `smoke` の 3 レーンで実行します
+- `verify` は `make verify` を実行する高速レーンです
+- `integration` は article-service の MySQL integration test を実行します
+- `smoke` は Playwright E2E を relevant changes 時に実行します
 - docs-only 変更では、GitHub Actions は required check を維持しつつ重い検証を省略します
 - collector-service は `ARTICLE_SERVICE_URL` 経由で source 一覧を取得し、`is_enabled=true` の source を収集します
 - ローカルで即時反映が必要な場合は `docker-compose.dev.yml` を重ねる `make dev-up` を使います
