@@ -173,9 +173,10 @@ make e2e-down
 
 補足:
 
-- docs-only 変更では `verify` は required check を維持しつつ重い検証を省略する
+- docs-only の PR / push でも CI workflow は起動し、`verify` を軽量成功で完了させる
 - `integration` と `smoke` は docs-only 変更では実行しない
-- docs-only の PR / push では CI workflow 自体を起動せず、PR 形式チェック系のみを実行する
+- `coverage` も docs-only 変更では実行しない
+- `workflow_dispatch` や mixed changes では `docs_only` 判定により `verify` の重い処理を省略できる
 
 ## Health Endpoints
 

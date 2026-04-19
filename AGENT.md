@@ -57,6 +57,7 @@
 - PR の題名と本文は、日本語指定がない限り日本語で書く
 - PR 作成時は `.github/pull_request_template.md` を基準に本文を組み立てる
 - GitHub API / MCP で PR を作る場合、テンプレートは自動適用されない前提で `.github/pull_request_template.md` を開いて手動で埋める
+- PR を作成または更新する前に、`.github/pull_request_template.md`、`.github/workflows/pr-body-check.yml`、`.github/workflows/commit-message-check.yml` を開き、題名・本文・コミットメッセージのガードレール適合を確認する
 - 明示的な指示がない限り `main` へ直接 push しない
 - 重要な方針変更は `RULES.md` 側も更新対象として確認する
 

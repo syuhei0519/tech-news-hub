@@ -150,13 +150,14 @@ PR での扱い:
 - `integration` は article-service と notification-service の MySQL integration test を常時実行する
 - `smoke` は E2E レーンとして分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
 - `main` への push と `workflow_dispatch` では、docs-only を除き `smoke` も実行する
-- docs-only の PR / push では CI workflow を起動せず、PR 形式チェック系のみを実行する
+- docs-only の PR / push でも CI workflow は起動し、required check を満たすため `verify` を軽量成功で完了させる
 
 補足:
 
 - 通常のコード変更では `verify` に `make verify`、`integration` に `make test-article-integration` と `make test-notification-integration` を割り当てる
-- docs-only 変更では、required status check を維持するため `verify` ジョブは成功させる
-- ただし docs-only 変更時は重い `make verify` を省略してよい
+- docs-only 変更時は `verify` job 自体は起動しつつ、重い `make verify` を省略する
+- `integration` と `coverage` は docs-only 変更では起動しない
+- `workflow_dispatch` や mixed changes でも `docs_only` 判定により重い `make verify` を省略できる
 - docs-only 判定条件は workflow 側で管理する
 - `make verify` に E2E は含めず、`make e2e-up` / `make e2e-seed` / `make test-e2e` / `make e2e-down` で責務を分ける
 - `integration` は MySQL service container 付きの独立 job とし、`verify` に混ぜない

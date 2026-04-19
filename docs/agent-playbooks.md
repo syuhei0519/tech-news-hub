@@ -24,6 +24,7 @@
 補足:
 
 - コミット前に `git log origin/main..HEAD --oneline` を確認し、コミット見出しが日本語ルールに沿っていることを確認する
+- PR 作成または更新前に `.github/pull_request_template.md`、`.github/workflows/pr-body-check.yml`、`.github/workflows/commit-message-check.yml` を確認し、テンプレートとガードレールを満たしていることを確認する
 
 ## Docs-Only
 
@@ -41,6 +42,7 @@
 
 - リンク先、コマンド、ファイル名の整合だけ確認する
 - PR を作る場合は `.github/pull_request_template.md` を開き、GitHub API / MCP 作成時も本文を手動で組み立てる
+- PR 更新時も `.github/workflows/pr-body-check.yml` と `.github/workflows/commit-message-check.yml` を確認し、題名・本文・コミットメッセージの違反がないことを確認する
 
 ## Frontend UI Change
 

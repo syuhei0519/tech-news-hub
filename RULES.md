@@ -141,6 +141,8 @@
 - Pull Request の題名と本文は、明示的な指示がない限り日本語で記述する
 - Pull Request 作成時は `.github/pull_request_template.md` を使用し、空欄のまま提出しない
 - Pull Request の検証欄、影響欄、ドキュメント欄は実施内容に合わせて更新する
+- Pull Request を作成または更新する前に、必ず `.github/pull_request_template.md`、`.github/workflows/pr-body-check.yml`、`.github/workflows/commit-message-check.yml` を確認し、題名・本文・コミットメッセージがガードレールに適合していることを自分で確認する
+- GitHub API / MCP などテンプレート自動適用が効かない経路で Pull Request を作る場合でも、この事前確認を省略しない
 - 明示的な指示がない限り `main` へ直接 push しない
 - 基本運用は feature branch + Pull Request とする
 - release branch は明示的な指示がない限り切らない
