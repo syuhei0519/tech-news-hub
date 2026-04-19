@@ -10,14 +10,16 @@
 
 2026-04-19 時点の前提:
 
-- `make verify` は backend test + frontend build + compose config check を実行する
+- `make verify` は backend test + frontend test + build + compose config check を実行する
 - frontend の component test 基盤は導入済み
 - article-service の repository / handler integration test はコード上に存在する
 - Playwright E2E の最小 smoke と CI レーンは導入済み
-- ただし frontend unit/component test と article integration test は標準 verify 導線に未統合
-- CI は `verify` と `e2e-smoke` の 2 レーン中心で、責務の分離がまだ粗い
+- article-service と notification-service の integration test は CI 常設ジョブで実行される
+- collector の契約テスト、notification-service の DB integration test、主要 API の error case test は実装済み
+- frontend test helper と fixture 方針はコード上に導入済み
+- `#28` の親 Issue は completed でクローズ済みであり、Phase 4.5 は完了扱いとする
 
-したがって、改善の中心は「新規テストを書くこと」だけではなく、「既存テストを常設の品質ゲートに組み込むこと」とする。
+したがって、この文書の主目的は未着手タスクの計画ではなく、Phase 4.5 で実施した内容を将来参照できる形で固定することにある。
 
 ## 到達目標
 
@@ -45,6 +47,8 @@ Phase 4.5 完了時に、次の状態を作る。
 - docs は実装と同じ変更で更新し、運用ルールと乖離させない
 
 ## 実施フェーズ
+
+各フェーズの主要子 Issue はすでにクローズ済みである。以下は「予定」ではなく、実施内容と残件整理として読む。
 
 ### フェーズ 1: 品質ゲート統合
 
@@ -170,19 +174,19 @@ Phase 4.5 完了時に、次の状態を作る。
 
 ## Issue 対応関係
 
-- `#28`: Phase 4.5 全体親 Issue
-- `#40`: Milestone A の親 Issue
-- `#41`: Milestone B の親 Issue
-- `#42`: Milestone C の親 Issue
-- `#43`: フェーズ 1 の frontend test 導線化
-- `#44`: フェーズ 1 の CI 3 層化
-- `#45`: フェーズ 1 の article integration 常設
-- `#46`: フェーズ 2 の article handler integration
-- `#47`: フェーズ 2 の collector contract test
-- `#48`: フェーズ 2 の notification-service DB integration
-- `#49`: フェーズ 2 の API error cases
-- `#50`: フェーズ 3 の frontend test 共通基盤整理
-- `#51`: フェーズ 3 とフェーズ 4 の E2E 安定化 / 可視化
+- `#28`: Phase 4.5 全体親 Issue。completed で closed
+- `#40`: Milestone A の親 Issue。closed
+- `#41`: Milestone B の親 Issue。closed
+- `#42`: Milestone C の親 Issue。closed
+- `#43`: フェーズ 1 の frontend test 導線化。closed
+- `#44`: フェーズ 1 の CI 3 層化。closed
+- `#45`: フェーズ 1 の article integration 常設。closed
+- `#46`: フェーズ 2 の article handler integration。closed
+- `#47`: フェーズ 2 の collector contract test。closed
+- `#48`: フェーズ 2 の notification-service DB integration。closed
+- `#49`: フェーズ 2 の API error cases。closed
+- `#50`: フェーズ 3 の frontend test 共通基盤整理。closed
+- `#51`: フェーズ 3 とフェーズ 4 の E2E 安定化 / 可視化。closed
 
 ## 推奨マイルストーン
 
@@ -233,3 +237,8 @@ Phase 4.5 完了時に、次の状態を作る。
 - E2E smoke が再現性高く維持されている
 - テストポリシーとテストデータ方針が文書化されている
 - coverage または OpenAPI 差分検知の少なくとも一方が CI に入っている
+
+補足:
+
+- 子 Issue `#40` から `#51` と親 Issue `#28` はクローズ済みであり、Phase 4.5 は完了したものとして扱う
+- 次の優先フェーズは `#7` の kind / Helm / Argo CD 整備である
