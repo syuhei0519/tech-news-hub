@@ -12,6 +12,8 @@ import (
 )
 
 func TestNotificationServicePersistsEventDerivedNotifications(t *testing.T) {
+	// consumer/service から永続化までを MySQL 実体で通し、
+	// event 契約の変更で通知一覧に出る内容が壊れないことを確認する。
 	db := testutil.OpenMySQLForTest(t)
 	testutil.ResetMySQLTables(t, db)
 
@@ -65,11 +67,13 @@ func TestNotificationServicePersistsEventDerivedNotifications(t *testing.T) {
 		t.Fatalf("unexpected event-derived notifications: %+v", listed)
 	}
 
+	// 後着の fetch.failed が先頭に来る前提で、一覧の表示順と level/source 紐付けを固定する。
 	latest := listed.Items[0]
 	if latest.EventID != "evt-fetch-failed-1" || latest.Level != "error" || latest.SourceID == nil || *latest.SourceID != sourceID || latest.FetchJobID == nil || *latest.FetchJobID != fetchJobID {
 		t.Fatalf("unexpected fetch-failed notification: %+v", latest)
 	}
 
+	// article.ingested は representative_title を本文に反映する現在仕様を守る。
 	older := listed.Items[1]
 	if older.EventID != "evt-article-1" || older.Level != "info" || older.Body != "最新記事: New article" {
 		t.Fatalf("unexpected article-ingested notification: %+v", older)

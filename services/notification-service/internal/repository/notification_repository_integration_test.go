@@ -110,6 +110,7 @@ func TestNotificationRepositoryListAndReadStatus(t *testing.T) {
 		t.Fatalf("expected nil for missing notification, got %+v", missing)
 	}
 
+	// page 境界でも total / total_pages と並び順が崩れず、画面のページ送りと整合することを確認する。
 	secondPage, err := repo.List(context.Background(), domain.ListNotificationsParams{
 		Page:     2,
 		PageSize: 1,

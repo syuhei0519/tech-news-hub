@@ -86,6 +86,7 @@ func TestProxyRequestReturnsGatewayTimeoutOnDeadlineExceeded(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
+	// upstream timeout は transport error と分けて 504 にし、利用者と運用の切り分けをしやすくする。
 	client := &http.Client{
 		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			return nil, context.DeadlineExceeded
@@ -290,6 +291,7 @@ func TestProxyCSVDownloadReturnsGatewayTimeoutOnDeadlineExceeded(t *testing.T) {
 	t.Parallel()
 	gin.SetMode(gin.TestMode)
 
+	// CSV download も通常 API と同じ timeout 方針を取り、失敗時の status code を揃える。
 	client := &http.Client{
 		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 			return nil, context.DeadlineExceeded

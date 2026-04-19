@@ -108,6 +108,8 @@ func TestRunCreatesAndFinishesFetchJobOnSuccess(t *testing.T) {
 func TestRunSendsNormalizedIngestContract(t *testing.T) {
 	t.Parallel()
 
+	// collector -> article-service の payload shape を固定し、
+	// 日付正規化・null handling・dedupe_key 生成のズレを検知する。
 	var ingestPayload IngestPayload
 
 	service := NewService("http://article-service")
@@ -149,6 +151,7 @@ func TestRunSendsNormalizedIngestContract(t *testing.T) {
 		t.Fatalf("expected 2 normalized articles, got %+v", ingestPayload.Articles)
 	}
 
+	// pubDate がある記事は RFC3339 UTC に正規化して送る。
 	first := ingestPayload.Articles[0]
 	if first.Title != "RFC1123Z" || first.URL != "https://example.com/with-date" || first.Excerpt != "desc" || first.Category != "cloud" {
 		t.Fatalf("unexpected first normalized article: %+v", first)
@@ -163,6 +166,7 @@ func TestRunSendsNormalizedIngestContract(t *testing.T) {
 		t.Fatalf("unexpected dedupe_key: %s", first.DedupeKey)
 	}
 
+	// pubDate が欠けている記事は ingest 契約上 nil を送り、現在時刻埋めを downstream に持ち込まない。
 	second := ingestPayload.Articles[1]
 	if second.Title != "Missing Date" || second.PublishedAt != nil {
 		t.Fatalf("expected nil published_at for missing date, got %+v", second)
@@ -339,6 +343,7 @@ func TestRunIgnoresPublisherFailureOnRSSFailure(t *testing.T) {
 func TestRunReturnsErrorOnMalformedFeedAndFinishesFetchJob(t *testing.T) {
 	t.Parallel()
 
+	// 壊れた feed でも fetch job は failed で閉じ、UI から失敗履歴を追える状態を維持する。
 	var finishPayload finishFetchJobPayload
 
 	service := NewService("http://article-service")

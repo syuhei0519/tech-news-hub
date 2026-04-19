@@ -69,6 +69,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("unexpected list response: %+v", listResp)
 	}
 
+	// 一覧の複合 filter と sort/paging を router 境界で通し、query 契約の破壊を防ぐ。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles?source_id="+int64String(sourceID)+"&category=k8s&is_read=false&sort=published_at&order=asc&page=1&page_size=1", nil)
 	router.ServeHTTP(rec, req)
@@ -112,6 +113,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("expected 404 for missing favorite target, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
+	// read-status 更新成功時は更新済み記事を返し、frontend が再取得なしで状態同期できる前提を守る。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/"+int64String(articleID)+"/read-status", strings.NewReader(`{"is_read":true}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -127,6 +129,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("unexpected updated read-status response: %+v", updatedRead)
 	}
 
+	// id と payload の不正は 404/500 ではなく 400 に寄せる。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodPatch, "/api/v1/articles/bad/read-status", strings.NewReader(`{"is_read":true}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -143,7 +146,7 @@ func TestRouterArticleEndpointsAndCSV(t *testing.T) {
 		t.Fatalf("expected 400 for invalid favorite-status payload, got %d body=%s", rec.Code, rec.Body.String())
 	}
 
-	// CSV endpoint は成功時ヘッダと本文の両方を確認する。
+	// CSV endpoint は BOM, header order, data row を固定し、一覧と別実装でも利用者契約を維持する。
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/articles/export.csv?source_id=1", nil)
 	router.ServeHTTP(rec, req)

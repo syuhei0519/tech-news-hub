@@ -150,6 +150,7 @@ PR での扱い:
 - `integration` は article-service と notification-service の MySQL integration test を常時実行する
 - `smoke` は E2E レーンとして分離し、PR では frontend / gateway / article-service / notification-service / compose / workflow 変更時だけ実行する
 - `main` への push と `workflow_dispatch` では、docs-only を除き `smoke` も実行する
+- docs-only の PR / push では CI workflow を起動せず、PR 形式チェック系のみを実行する
 
 補足:
 

@@ -152,6 +152,7 @@ make verify
 
 - docs-only 変更では `verify` は required check を維持しつつ重い検証を省略する
 - `integration` と `smoke` は docs-only 変更では実行しない
+- docs-only の PR / push では CI workflow 自体を起動せず、PR 形式チェック系のみを実行する
 
 ## Health Endpoints
 
