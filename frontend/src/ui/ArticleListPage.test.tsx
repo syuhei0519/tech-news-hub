@@ -4,50 +4,23 @@ import { http, HttpResponse } from "msw";
 import { ArticleListPage } from "./ArticleListPage";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/setup";
+import { articlesHandler, sourcesHandler } from "../test/handlers";
+import { buildArticle, buildArticlesResponse, buildSource } from "../test/fixtures";
 
-const article = {
-  id: 1,
-  title: "Kubernetes Upgrade Guide",
-  url: "https://example.com/articles/1",
-  source_id: 3,
-  source_name: "Tech Blog",
-  published_at: "2026-04-16T00:00:00Z",
-  fetched_at: "2026-04-16T01:00:00Z",
-  excerpt: "Upgrade notes for production clusters.",
-  category: "kubernetes",
-  tags: ["kubernetes"],
-  is_read: false,
-  is_favorite: true,
-  created_at: "2026-04-16T01:00:00Z",
-  updated_at: "2026-04-16T01:00:00Z",
-};
-
+const article = buildArticle({ is_favorite: true });
 const sources = [
-  {
+  buildSource({
     id: 3,
     name: "Tech Blog",
-    type: "rss",
     fetch_url: "https://example.com/feed.xml",
-    fetch_method: "rss",
-    interval_minutes: 60,
-    default_category: "kubernetes",
-    is_enabled: true,
     last_fetched_at: null,
     last_fetch_status: null,
-    last_error_message: null,
-    created_at: "2026-04-16T00:00:00Z",
-    updated_at: "2026-04-16T00:00:00Z",
-  },
+  }),
 ];
 
 describe("ArticleListPage", () => {
   it("renders articles and sources on initial load", async () => {
-    server.use(
-      http.get("http://localhost:8080/api/v1/sources", () => HttpResponse.json({ items: sources })),
-      http.get("http://localhost:8080/api/v1/articles", () =>
-        HttpResponse.json({ items: [article], total: 1, page: 1, page_size: 20, total_pages: 1 }),
-      ),
-    );
+    server.use(sourcesHandler(sources), articlesHandler([article]));
 
     renderWithProviders(<ArticleListPage />);
 
@@ -71,9 +44,7 @@ describe("ArticleListPage", () => {
   it("shows an error when source loading fails", async () => {
     server.use(
       http.get("http://localhost:8080/api/v1/sources", () => new HttpResponse(null, { status: 500 })),
-      http.get("http://localhost:8080/api/v1/articles", () =>
-        HttpResponse.json({ items: [article], total: 1, page: 1, page_size: 20, total_pages: 1 }),
-      ),
+      http.get("http://localhost:8080/api/v1/articles", () => HttpResponse.json(buildArticlesResponse([article]))),
     );
 
     renderWithProviders(<ArticleListPage />);

@@ -1,3 +1,7 @@
+-- Playwright smoke 用の最小 seed。
+-- article-flow.spec.ts と notification-flow.spec.ts が前提にする状態だけを作る。
+-- 外部 RSS、RabbitMQ 到着待ち、現在時刻依存には寄せない。
+
 DELETE FROM notifications;
 DELETE FROM articles;
 DELETE FROM fetch_jobs;

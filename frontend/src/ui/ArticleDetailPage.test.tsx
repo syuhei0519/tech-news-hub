@@ -4,27 +4,14 @@ import { http, HttpResponse } from "msw";
 import { ArticleDetailPage } from "./ArticleDetailPage";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/setup";
+import { articleDetailHandler } from "../test/handlers";
+import { buildArticle } from "../test/fixtures";
 
-const article = {
-  id: 1,
-  title: "Kubernetes Upgrade Guide",
-  url: "https://example.com/articles/1",
-  source_id: 3,
-  source_name: "Tech Blog",
-  published_at: "2026-04-16T00:00:00Z",
-  fetched_at: "2026-04-16T01:00:00Z",
-  excerpt: "Upgrade notes for production clusters.",
-  category: "kubernetes",
-  tags: ["kubernetes"],
-  is_read: false,
-  is_favorite: false,
-  created_at: "2026-04-16T01:00:00Z",
-  updated_at: "2026-04-16T01:00:00Z",
-};
+const article = buildArticle();
 
 describe("ArticleDetailPage", () => {
   it("renders article details after a successful fetch", async () => {
-    server.use(http.get("http://localhost:8080/api/v1/articles/1", () => HttpResponse.json(article)));
+    server.use(articleDetailHandler(article));
 
     renderWithProviders(<ArticleDetailPage />, { path: "/articles/:id", route: "/articles/1" });
 
@@ -52,7 +39,7 @@ describe("ArticleDetailPage", () => {
     const updatedFavoriteArticle = { ...updatedReadArticle, is_favorite: true };
 
     server.use(
-      http.get("http://localhost:8080/api/v1/articles/1", () => HttpResponse.json(article)),
+      articleDetailHandler(article),
       http.patch("http://localhost:8080/api/v1/articles/1/read-status", async () => HttpResponse.json(updatedReadArticle)),
       http.patch("http://localhost:8080/api/v1/articles/1/favorite-status", async () =>
         HttpResponse.json(updatedFavoriteArticle),
@@ -99,7 +86,7 @@ describe("ArticleDetailPage", () => {
     const user = userEvent.setup();
 
     server.use(
-      http.get("http://localhost:8080/api/v1/articles/1", () => HttpResponse.json(article)),
+      articleDetailHandler(article),
       http.patch("http://localhost:8080/api/v1/articles/1/read-status", () => new HttpResponse(null, { status: 500 })),
     );
 

@@ -197,6 +197,21 @@ Phase 5 より前に、次を優先して整備する。
 - 時刻依存は固定化または注入する
 - CSV は列順と日付形式を検証する
 
+### Frontend Component Test Data
+
+- `frontend/src/test/render.tsx` を provider / router の共通入口として使う
+- fixture は `frontend/src/test/fixtures.ts` に `buildXxx(overrides)` 形式で置く
+- MSW handler は `frontend/src/test/handlers.ts` に置き、画面テストから直接 endpoint 配線を重複させない
+- 共有 fixture は 2 箇所以上で再利用される API shape に限定し、画面固有の期待値までは抽象化しない
+- 日付や ID は固定値を使い、現在時刻依存の assertion を避ける
+
+### E2E Seed Policy
+
+- `make e2e-seed` は Playwright smoke が必要とする最小 DB 状態だけを再作成する
+- seed は冪等に再実行できることを優先し、毎回同じレコード集合を投入する
+- collector、外部 HTTP、RabbitMQ 到着待ちを E2E の前提にしない
+- smoke で検証する導線は記事一覧/詳細/CSV と通知既読更新の 2 本に限定する
+
 ## Bugfix Policy
 
 - バグ修正時は、可能なら再発防止テストを追加する
