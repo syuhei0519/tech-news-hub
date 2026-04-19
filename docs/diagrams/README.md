@@ -16,6 +16,8 @@ README や個別 docs から辿れるようにし、runtime 構成、データ�
   - `collector-service` が source 同期、fetch job 管理、RSS 正規化、ingest をどう進めるかを示します。
 - [通知生成フロー図](notification-generation-flow.md)
   - `article.ingested` と `collector.fetch.failed` が通知一覧に見えるまでの非同期経路を示します。
+- [公開 API / 内部 API 責務境界図](api-boundary-public-internal.md)
+  - frontend route、`api-gateway` の公開 API group、upstream service の `/api/v1` と `article-service` の `/internal` 境界を示します。
 - [CI / テストレーン構成図](ci-test-lanes.md)
   - `changes -> verify / integration / coverage / smoke` の条件分岐と責務を示します。
 
