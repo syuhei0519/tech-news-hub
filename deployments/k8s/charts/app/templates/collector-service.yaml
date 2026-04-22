@@ -1,0 +1,92 @@
+{{- $root := . -}}
+{{- $service := .Values.services.collectorService -}}
+{{- if $service.enabled }}
+{{- $component := "collector-service" -}}
+{{- $name := include "tech-feed-hub.componentFullname" (dict "root" $root "component" $component) -}}
+{{- $articleServiceUrl := default (include "tech-feed-hub.articleServiceUrl" $root) $root.Values.global.dependencies.articleServiceUrl -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "tech-feed-hub.componentLabels" (dict "root" $root "component" $component) | nindent 4 }}
+    {{- with $service.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ $service.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 8 }}
+        {{- with $service.extraLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $service.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "tech-feed-hub.serviceAccountName" $root }}
+      {{- include "tech-feed-hub.imagePullSecrets" (dict "root" $root "service" $service) | nindent 6 }}
+      containers:
+        - name: {{ $component }}
+          image: "{{ $service.image.repository }}:{{ $service.image.tag }}"
+          imagePullPolicy: {{ $service.image.pullPolicy }}
+          {{- with $service.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $service.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $service.containerPort }}
+          env:
+            - name: PORT
+              value: {{ printf "%v" $service.containerPort | quote }}
+            - name: ARTICLE_SERVICE_URL
+              value: {{ $articleServiceUrl | quote }}
+            - name: AMQP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.dependencies.rabbitmq.secretRef.name }}
+                  key: {{ $root.Values.global.dependencies.rabbitmq.secretRef.key }}
+            - name: AMQP_EXCHANGE
+              value: {{ $root.Values.global.dependencies.rabbitmq.exchange | quote }}
+            {{- with $service.extraEnv }}
+            {{- include "tech-feed-hub.extraEnv" . | nindent 12 }}
+            {{- end }}
+            {{- with $service.extraSecretEnv }}
+            {{- include "tech-feed-hub.extraSecretEnv" . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- include "tech-feed-hub.httpProbe" $service.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- include "tech-feed-hub.httpProbe" $service.probes.readiness | nindent 12 }}
+          {{- with $service.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "tech-feed-hub.componentLabels" (dict "root" $root "component" $component) | nindent 4 }}
+spec:
+  type: {{ $service.service.type }}
+  selector:
+    {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $service.service.port }}
+      targetPort: http
+{{- end }}

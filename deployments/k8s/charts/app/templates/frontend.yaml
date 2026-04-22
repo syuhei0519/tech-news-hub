@@ -1,0 +1,120 @@
+{{- $root := . -}}
+{{- $service := .Values.services.frontend -}}
+{{- if $service.enabled }}
+{{- $component := "frontend" -}}
+{{- $name := include "tech-feed-hub.componentFullname" (dict "root" $root "component" $component) -}}
+{{- $proxyTarget := default (include "tech-feed-hub.apiGatewayUrl" $root) $service.config.proxyTarget -}}
+{{- $ingressAnnotations := mergeOverwrite (dict) ($root.Values.global.ingress.annotations | default dict) ($service.ingress.annotations | default dict) -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "tech-feed-hub.componentLabels" (dict "root" $root "component" $component) | nindent 4 }}
+    {{- with $service.extraLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ $service.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 8 }}
+        {{- with $service.extraLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $service.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "tech-feed-hub.serviceAccountName" $root }}
+      {{- include "tech-feed-hub.imagePullSecrets" (dict "root" $root "service" $service) | nindent 6 }}
+      containers:
+        - name: {{ $component }}
+          image: "{{ $service.image.repository }}:{{ $service.image.tag }}"
+          imagePullPolicy: {{ $service.image.pullPolicy }}
+          {{- with $service.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $service.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $service.containerPort }}
+          env:
+            - name: VITE_API_BASE_URL
+              value: {{ $service.config.apiBaseUrl | quote }}
+            - name: VITE_PROXY_TARGET
+              value: {{ $proxyTarget | quote }}
+            {{- with $service.extraEnv }}
+            {{- include "tech-feed-hub.extraEnv" . | nindent 12 }}
+            {{- end }}
+            {{- with $service.extraSecretEnv }}
+            {{- include "tech-feed-hub.extraSecretEnv" . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- include "tech-feed-hub.httpProbe" $service.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- include "tech-feed-hub.httpProbe" $service.probes.readiness | nindent 12 }}
+          {{- with $service.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "tech-feed-hub.componentLabels" (dict "root" $root "component" $component) | nindent 4 }}
+spec:
+  type: {{ $service.service.type }}
+  selector:
+    {{- include "tech-feed-hub.componentSelectorLabels" (dict "root" $root "component" $component) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $service.service.port }}
+      targetPort: http
+{{- if $service.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "tech-feed-hub.componentLabels" (dict "root" $root "component" $component) | nindent 4 }}
+  {{- if $ingressAnnotations }}
+  annotations:
+    {{- toYaml $ingressAnnotations | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ default $root.Values.global.ingress.className $service.ingress.className }}
+  rules:
+    {{- range $service.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path | quote }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: {{ $service.service.port }}
+          {{- end }}
+    {{- end }}
+  {{- with $service.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

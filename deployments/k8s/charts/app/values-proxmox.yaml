@@ -1,0 +1,109 @@
+global:
+  ingress:
+    className: nginx
+  imagePullSecrets:
+    - ghcr-creds
+  dependencies:
+    mysql:
+      secretRef:
+        name: tech-feed-hub-proxmox-secrets
+        key: MYSQL_DSN
+    rabbitmq:
+      secretRef:
+        name: tech-feed-hub-proxmox-secrets
+        key: AMQP_URL
+  persistence:
+    mysql:
+      storageClass: ceph-block
+    rabbitmq:
+      storageClass: ceph-block
+
+services:
+  frontend:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/frontend
+      tag: main
+      pullPolicy: IfNotPresent
+    ingress:
+      hosts:
+        - host: tech-feed-hub.home.arpa
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: tech-feed-hub-home-arpa-tls
+          hosts:
+            - tech-feed-hub.home.arpa
+    resources:
+      requests:
+        cpu: 100m
+        memory: 192Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  apiGateway:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/api-gateway
+      tag: main
+      pullPolicy: IfNotPresent
+    ingress:
+      hosts:
+        - host: api.tech-feed-hub.home.arpa
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: api-tech-feed-hub-home-arpa-tls
+          hosts:
+            - api.tech-feed-hub.home.arpa
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  articleService:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/article-service
+      tag: main
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 750m
+        memory: 768Mi
+
+  collectorService:
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/collector-service
+      tag: main
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  notificationService:
+    replicaCount: 2
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/notification-service
+      tag: main
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 150m
+        memory: 192Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi

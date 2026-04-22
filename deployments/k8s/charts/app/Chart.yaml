@@ -1,0 +1,6 @@
+apiVersion: v2
+name: tech-feed-hub-app
+description: Umbrella Helm chart for Tech Feed Hub application services.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
