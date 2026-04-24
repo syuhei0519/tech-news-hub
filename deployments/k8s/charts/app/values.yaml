@@ -1,0 +1,245 @@
+global:
+  nameOverride: tech-feed-hub
+  fullnameOverride: ""
+  imagePullSecrets: []
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+  ingress:
+    className: nginx
+    annotations: {}
+  dependencies:
+    articleServiceUrl: ""
+    notificationServiceUrl: ""
+    mysql:
+      secretRef:
+        name: tech-feed-hub-app-secrets
+        key: MYSQL_DSN
+    rabbitmq:
+      secretRef:
+        name: tech-feed-hub-app-secrets
+        key: AMQP_URL
+      exchange: tech-feed.events
+      queueName: notification-service
+  persistence:
+    mysql:
+      enabled: false
+      storageClass: ""
+      size: 20Gi
+      existingClaim: ""
+    rabbitmq:
+      enabled: false
+      storageClass: ""
+      size: 8Gi
+      existingClaim: ""
+
+services:
+  frontend:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/frontend
+      tag: latest
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podAnnotations: {}
+    extraLabels: {}
+    service:
+      type: ClusterIP
+      port: 5173
+    containerPort: 5173
+    resources: {}
+    command: []
+    args: []
+    ingress:
+      enabled: true
+      className: ""
+      annotations: {}
+      hosts:
+        - host: tech-feed-hub.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+    config:
+      apiBaseUrl: /
+      proxyTarget: ""
+    probes:
+      liveness:
+        path: /
+        initialDelaySeconds: 15
+        periodSeconds: 15
+        timeoutSeconds: 2
+        failureThreshold: 3
+      readiness:
+        path: /
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 2
+        failureThreshold: 3
+    extraEnv: []
+    extraSecretEnv: []
+
+  apiGateway:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/api-gateway
+      tag: latest
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podAnnotations: {}
+    extraLabels: {}
+    service:
+      type: ClusterIP
+      port: 8080
+    containerPort: 8080
+    resources: {}
+    command: []
+    args: []
+    ingress:
+      enabled: true
+      className: ""
+      annotations: {}
+      hosts:
+        - host: api.tech-feed-hub.local
+          paths:
+            - path: /
+              pathType: Prefix
+      tls: []
+    config:
+      jwtSecret: local-dev-secret
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 2
+        failureThreshold: 3
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 2
+        failureThreshold: 3
+    extraEnv: []
+    extraSecretEnv: []
+
+  articleService:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/article-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podAnnotations: {}
+    extraLabels: {}
+    service:
+      type: ClusterIP
+      port: 8081
+    containerPort: 8081
+    resources: {}
+    command: []
+    args: []
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 2
+        failureThreshold: 3
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 2
+        failureThreshold: 3
+    extraEnv: []
+    extraSecretEnv: []
+
+  collectorService:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/collector-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podAnnotations: {}
+    extraLabels: {}
+    service:
+      type: ClusterIP
+      port: 8082
+    containerPort: 8082
+    resources: {}
+    command: []
+    args: []
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
+    schedule: ""
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 2
+        failureThreshold: 3
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 2
+        failureThreshold: 3
+    extraEnv: []
+    extraSecretEnv: []
+
+  notificationService:
+    enabled: true
+    replicaCount: 1
+    image:
+      repository: ghcr.io/syuhei0519/tech-news-hub/notification-service
+      tag: latest
+      pullPolicy: IfNotPresent
+    imagePullSecrets: []
+    podAnnotations: {}
+    extraLabels: {}
+    service:
+      type: ClusterIP
+      port: 8083
+    containerPort: 8083
+    resources: {}
+    command: []
+    args: []
+    ingress:
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts: []
+      tls: []
+    probes:
+      liveness:
+        path: /health
+        initialDelaySeconds: 10
+        periodSeconds: 15
+        timeoutSeconds: 2
+        failureThreshold: 3
+      readiness:
+        path: /health
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 2
+        failureThreshold: 3
+    extraEnv: []
+    extraSecretEnv: []

@@ -1,0 +1,96 @@
+global:
+  ingress:
+    className: nginx
+  imagePullSecrets: []
+  dependencies:
+    mysql:
+      secretRef:
+        name: tech-feed-hub-kind-secrets
+        key: MYSQL_DSN
+    rabbitmq:
+      secretRef:
+        name: tech-feed-hub-kind-secrets
+        key: AMQP_URL
+  persistence:
+    mysql:
+      storageClass: standard
+    rabbitmq:
+      storageClass: standard
+
+services:
+  frontend:
+    image:
+      repository: tech-feed-hub/frontend
+      tag: kind
+      pullPolicy: IfNotPresent
+    ingress:
+      hosts:
+        - host: tech-feed-hub.kind.local
+          paths:
+            - path: /
+              pathType: Prefix
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+  apiGateway:
+    image:
+      repository: tech-feed-hub/api-gateway
+      tag: kind
+      pullPolicy: IfNotPresent
+    ingress:
+      hosts:
+        - host: api.tech-feed-hub.kind.local
+          paths:
+            - path: /
+              pathType: Prefix
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+
+  articleService:
+    image:
+      repository: tech-feed-hub/article-service
+      tag: kind
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+  collectorService:
+    image:
+      repository: tech-feed-hub/collector-service
+      tag: kind
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 192Mi
+
+  notificationService:
+    image:
+      repository: tech-feed-hub/notification-service
+      tag: kind
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 75m
+        memory: 96Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
